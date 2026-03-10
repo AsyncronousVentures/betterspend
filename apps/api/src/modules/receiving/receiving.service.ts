@@ -1,0 +1,119 @@
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { eq, and } from 'drizzle-orm';
+import { DB_TOKEN } from '../../database/database.module';
+import type { Db } from '@betterspend/db';
+import { goodsReceipts, goodsReceiptLines, purchaseOrders, poLines } from '@betterspend/db';
+import { SequenceService } from '../../common/services/sequence.service';
+
+export interface CreateGrnInput {
+  purchaseOrderId: string;
+  receivedBy: string;
+  receivedDate: string;
+  notes?: string;
+  lines: Array<{
+    poLineId: string;
+    quantityReceived: number;
+    quantityRejected?: number;
+    rejectionReason?: string;
+    storageLocation?: string;
+  }>;
+}
+
+@Injectable()
+export class ReceivingService {
+  constructor(
+    @Inject(DB_TOKEN) private readonly db: Db,
+    private readonly sequenceService: SequenceService,
+  ) {}
+
+  async findAll(organizationId: string) {
+    return this.db.query.goodsReceipts.findMany({
+      where: (g, { eq }) => eq(g.organizationId, organizationId),
+      with: { lines: true },
+      orderBy: (g, { desc }) => desc(g.createdAt),
+    });
+  }
+
+  async findOne(id: string, organizationId: string) {
+    const grn = await this.db.query.goodsReceipts.findFirst({
+      where: (g, { and, eq }) => and(eq(g.id, id), eq(g.organizationId, organizationId)),
+      with: {
+        lines: { with: { poLine: true } },
+        purchaseOrder: { with: { vendor: true, lines: true } },
+      },
+    });
+    if (!grn) throw new NotFoundException(`GRN ${id} not found`);
+    return grn;
+  }
+
+  async create(organizationId: string, input: CreateGrnInput) {
+    // Validate PO exists and is issued
+    const po = await this.db.query.purchaseOrders.findFirst({
+      where: (p, { and, eq }) => and(eq(p.id, input.purchaseOrderId), eq(p.organizationId, organizationId)),
+      with: { lines: true },
+    });
+    if (!po) throw new NotFoundException(`PO ${input.purchaseOrderId} not found`);
+    if (!['approved', 'issued', 'partially_received'].includes(po.status)) {
+      throw new BadRequestException(`PO must be in approved/issued/partially_received status to receive against`);
+    }
+
+    const number = await this.sequenceService.next(organizationId, 'goods_receipt');
+
+    const grnId = await this.db.transaction(async (tx) => {
+      const [grn] = await tx.insert(goodsReceipts).values({
+        organizationId,
+        purchaseOrderId: input.purchaseOrderId,
+        number,
+        receivedBy: input.receivedBy,
+        receivedDate: new Date(input.receivedDate),
+        status: 'confirmed',
+        notes: input.notes ?? null,
+      }).returning();
+
+      if (input.lines && input.lines.length > 0) {
+        await tx.insert(goodsReceiptLines).values(
+          input.lines.map((l) => ({
+            goodsReceiptId: grn.id,
+            poLineId: l.poLineId,
+            quantityReceived: String(l.quantityReceived),
+            quantityRejected: String(l.quantityRejected ?? 0),
+            rejectionReason: l.rejectionReason ?? null,
+            storageLocation: l.storageLocation ?? null,
+          })),
+        );
+      }
+
+      return grn.id;
+    });
+
+    // Update PO status based on receipt completeness
+    await this.updatePoReceiptStatus(input.purchaseOrderId, organizationId);
+
+    return this.findOne(grnId, organizationId);
+  }
+
+  private async updatePoReceiptStatus(poId: string, organizationId: string) {
+    // Fetch all GRN lines for this PO to compute received totals
+    const po = await this.db.query.purchaseOrders.findFirst({
+      where: (p, { eq }) => eq(p.id, poId),
+      with: { lines: true, goodsReceipts: { with: { lines: true } } },
+    });
+    if (!po) return;
+
+    const allGrnLines = (po.goodsReceipts as any[]).flatMap((g: any) => g.lines ?? []);
+
+    const allFullyReceived = (po.lines as any[]).every((poLine: any) => {
+      const received = allGrnLines
+        .filter((gl: any) => gl.poLineId === poLine.id)
+        .reduce((sum: number, gl: any) => sum + parseFloat(gl.quantityReceived), 0);
+      return received >= parseFloat(poLine.quantity);
+    });
+
+    const anyReceived = allGrnLines.length > 0;
+    const newStatus = allFullyReceived ? 'received' : anyReceived ? 'partially_received' : po.status;
+
+    await this.db.update(purchaseOrders)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(purchaseOrders.id, poId));
+  }
+}
