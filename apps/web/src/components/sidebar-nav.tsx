@@ -36,6 +36,7 @@ const NAV_CONFIG: NavEntry[] = [
     children: [
       { label: 'Requisitions', href: '/requisitions' },
       { label: 'Purchase Orders', href: '/purchase-orders' },
+      { label: 'RFQ / Sourcing', href: '/rfq' },
       { label: 'Catalog', href: '/catalog' },
     ],
   },
@@ -53,6 +54,7 @@ const NAV_CONFIG: NavEntry[] = [
     children: [
       { label: 'Pending Approvals', href: '/approvals' },
       { label: 'Approval Rules', href: '/approval-rules' },
+      { label: 'Delegations', href: '/approval-delegations' },
     ],
   },
   {

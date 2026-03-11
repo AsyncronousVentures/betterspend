@@ -5,6 +5,7 @@ import type { Db } from '@betterspend/db';
 import { approvalRules, approvalRuleSteps, approvalRequests, approvalActions, requisitions, purchaseOrders } from '@betterspend/db';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ApprovalDelegationsService } from '../approval-delegations/approval-delegations.service';
 
 const DEMO_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000002';
 
@@ -14,6 +15,7 @@ export class ApprovalEngineService {
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly webhookEvents: WebhookEventService,
     @Optional() private readonly notifications: NotificationsService,
+    @Optional() private readonly delegations: ApprovalDelegationsService,
   ) {}
 
   // Evaluate a JSONB condition expression against an entity object
@@ -112,6 +114,15 @@ export class ApprovalEngineService {
     const sortedSteps = [...rule.steps].sort((a, b) => a.stepOrder - b.stepOrder);
     const firstStep = sortedSteps[0];
 
+    // Resolve delegation: if the first-step approver has delegated, route to delegatee
+    let effectiveApproverId = initiatedBy;
+    if (this.delegations && firstStep.approverId) {
+      const delegatee = await this.delegations.getActiveDelegatee(organizationId, firstStep.approverId);
+      if (delegatee) {
+        effectiveApproverId = delegatee;
+      }
+    }
+
     // The schema for approvalRequests has no organizationId, initiatedBy, or dueAt —
     // those fields are tracked via the actions log and the approvableType/approvableId pattern
     const requestId = await this.db.transaction(async (tx) => {
@@ -127,9 +138,11 @@ export class ApprovalEngineService {
       await tx.insert(approvalActions).values({
         approvalRequestId: req.id,
         stepOrder: firstStep.stepOrder,
-        approverId: initiatedBy,
+        approverId: effectiveApproverId,
         action: 'submitted',
-        comment: 'Submitted for approval',
+        comment: effectiveApproverId !== initiatedBy
+          ? `Submitted for approval (delegated from original approver)`
+          : 'Submitted for approval',
       });
 
       return req.id;

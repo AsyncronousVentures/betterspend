@@ -329,4 +329,14 @@ export const api = {
     create: (data: unknown) => apiFetch<any>('/approval-delegations', { method: 'POST', body: JSON.stringify(data) }),
     cancel: (id: string) => apiFetch<void>(`/approval-delegations/${id}`, { method: 'DELETE' }),
   },
+  rfq: {
+    list: () => apiFetch<any[]>('/rfq'),
+    get: (id: string) => apiFetch<any>(`/rfq/${id}`),
+    create: (data: unknown) => apiFetch<any>('/rfq', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) => apiFetch<any>(`/rfq/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    open: (id: string) => apiFetch<any>(`/rfq/${id}/open`, { method: 'POST' }),
+    close: (id: string) => apiFetch<any>(`/rfq/${id}/close`, { method: 'POST' }),
+    award: (id: string, responseId: string) => apiFetch<any>(`/rfq/${id}/award`, { method: 'POST', body: JSON.stringify({ responseId }) }),
+    submitResponse: (id: string, data: unknown) => apiFetch<any>(`/rfq/${id}/responses`, { method: 'POST', body: JSON.stringify(data) }),
+  },
 };
