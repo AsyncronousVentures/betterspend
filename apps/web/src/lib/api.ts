@@ -155,6 +155,10 @@ export const api = {
       return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     },
   },
+  ocr: {
+    createJob: (data: unknown) => apiFetch<any>('/ocr/jobs', { method: 'POST', body: JSON.stringify(data) }),
+    getJob: (id: string) => apiFetch<any>(`/ocr/jobs/${id}`),
+  },
   analytics: {
     kpis: () => apiFetch<any>('/analytics/kpis'),
     spendByVendor: () => apiFetch<any[]>('/analytics/spend/by-vendor'),

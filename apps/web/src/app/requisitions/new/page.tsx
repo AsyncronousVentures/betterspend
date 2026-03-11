@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../../lib/api';
 
 interface CatalogItem {
   id: string;
@@ -67,8 +66,11 @@ function CatalogPicker({ onSelect, currentDescription }: {
     debounce.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_URL}/catalog-items/search?q=${encodeURIComponent(val)}`);
-        if (res.ok) { setResults(await res.json() as CatalogItem[]); setOpen(true); }
+        const items = await api.catalog.search(val);
+        setResults(items as CatalogItem[]);
+        setOpen(true);
+      } catch {
+        // ignore
       } finally { setLoading(false); }
     }, 250);
   }
@@ -158,28 +160,20 @@ export default function NewRequisitionPage() {
     if (!title.trim()) { setError('Title is required.'); return; }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/requisitions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          priority, currency,
-          neededBy: neededBy || undefined,
-          lines: lines.map((l) => ({
-            description: l.description,
-            quantity: parseFloat(l.qty) || 1,
-            unitOfMeasure: l.uom || 'each',
-            unitPrice: parseFloat(l.unitPrice) || 0,
-            vendorId: l.vendorId || undefined,
-            catalogItemId: l.catalogItemId || undefined,
-          })),
-        }),
+      await api.requisitions.create({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        priority, currency,
+        neededBy: neededBy || undefined,
+        lines: lines.map((l) => ({
+          description: l.description,
+          quantity: parseFloat(l.qty) || 1,
+          unitOfMeasure: l.uom || 'each',
+          unitPrice: parseFloat(l.unitPrice) || 0,
+          vendorId: l.vendorId || undefined,
+          catalogItemId: l.catalogItemId || undefined,
+        })),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Request failed' })) as { message?: string };
-        throw new Error(err.message ?? `HTTP ${res.status}`);
-      }
       router.push('/requisitions');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');

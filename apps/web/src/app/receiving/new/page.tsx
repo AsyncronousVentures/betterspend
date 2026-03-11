@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { api } from '../../../lib/api';
 
 interface PO {
   id: string;
@@ -24,10 +23,9 @@ export default function NewGRNPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API_URL}/purchase-orders`)
-      .then((r) => r.json())
+    api.purchaseOrders.list()
       .then((data) => {
-        const eligible = (Array.isArray(data) ? data : data.data ?? []).filter((po: PO) =>
+        const eligible = (Array.isArray(data) ? data : (data as any).data ?? []).filter((po: PO) =>
           ['approved', 'issued', 'partially_received'].includes(po.status),
         );
         setPOs(eligible);
@@ -37,8 +35,7 @@ export default function NewGRNPage() {
 
   const handlePOChange = async (poId: string) => {
     if (!poId) { setSelectedPO(null); setLineQtys({}); return; }
-    const res = await fetch(`${API_URL}/purchase-orders/${poId}`);
-    const po: PO = await res.json();
+    const po = await api.purchaseOrders.get(poId) as PO;
     setSelectedPO(po);
     const qtys: Record<string, { received: string; rejected: string }> = {};
     (po.lines ?? []).forEach((l) => { qtys[l.id] = { received: l.quantity, rejected: '0' }; });
@@ -60,25 +57,15 @@ export default function NewGRNPage() {
       }));
 
     try {
-      const res = await fetch(`${API_URL}/receiving`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          purchaseOrderId: selectedPO.id,
-          receivedBy: '00000000-0000-0000-0000-000000000002',
-          receivedDate,
-          notes: notes || undefined,
-          lines,
-        }),
+      const grn = await api.receiving.create({
+        purchaseOrderId: selectedPO.id,
+        receivedDate,
+        notes: notes || undefined,
+        lines,
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message ?? 'Failed to create GRN');
-      }
-      const grn = await res.json();
-      router.push(`/receiving/${grn.id}`);
+      router.push(`/receiving/${(grn as any).id}`);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message ?? 'Failed to create GRN');
       setLoading(false);
     }
   };

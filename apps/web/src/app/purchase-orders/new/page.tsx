@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { api } from '../../../lib/api';
 
 interface Vendor {
   id: string;
@@ -61,10 +60,9 @@ export default function NewPurchaseOrderPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API_URL}/vendors`)
-      .then((res) => (res.ok ? res.json() : []))
+    api.vendors.list()
       .then((data) => {
-        const list: Vendor[] = Array.isArray(data) ? data : (data.data ?? []);
+        const list: Vendor[] = Array.isArray(data) ? data : (data as any).data ?? [];
         setVendors(list);
         if (list.length > 0) setVendorId(list[0].id);
       })
@@ -118,17 +116,7 @@ export default function NewPurchaseOrderPage() {
         })),
       };
 
-      const res = await fetch(`${API_URL}/purchase-orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Request failed' }));
-        throw new Error(err.message || `HTTP ${res.status}`);
-      }
-
+      await api.purchaseOrders.create(payload);
       router.push('/purchase-orders');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');

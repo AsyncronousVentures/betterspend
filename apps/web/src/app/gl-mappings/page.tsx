@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../lib/api';
 
 type TargetSystem = 'qbo' | 'xero';
 
@@ -85,16 +84,13 @@ export default function GlMappingsPage() {
   });
 
   async function loadMappings() {
-    const url = filterSystem
-      ? `${API_URL}/gl/mappings?targetSystem=${filterSystem}`
-      : `${API_URL}/gl/mappings`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (res.ok) setMappings(await res.json() as GlMapping[]);
+    const data = await api.glMappings.list(filterSystem || undefined).catch(() => []);
+    setMappings(data as GlMapping[]);
   }
 
   async function loadJobs() {
-    const res = await fetch(`${API_URL}/gl/export-jobs`, { cache: 'no-store' });
-    if (res.ok) setJobs(await res.json() as GlExportJob[]);
+    const data = await api.glExportJobs.list().catch(() => []);
+    setJobs(data as GlExportJob[]);
   }
 
   useEffect(() => {
@@ -107,25 +103,18 @@ export default function GlMappingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`${API_URL}/gl/mappings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          glAccount: form.glAccount,
-          glAccountName: form.glAccountName || undefined,
-          targetSystem: form.targetSystem,
-          externalAccountCode: form.externalAccountCode,
-          externalAccountName: form.externalAccountName || undefined,
-        }),
+      await api.glMappings.create({
+        glAccount: form.glAccount,
+        glAccountName: form.glAccountName || undefined,
+        targetSystem: form.targetSystem,
+        externalAccountCode: form.externalAccountCode,
+        externalAccountName: form.externalAccountName || undefined,
       });
-      if (res.ok) {
-        setShowForm(false);
-        setForm({ glAccount: '', glAccountName: '', targetSystem: 'qbo', externalAccountCode: '', externalAccountName: '' });
-        await loadMappings();
-      } else {
-        const err = await res.json() as { message?: string };
-        alert(err.message ?? 'Failed to create mapping');
-      }
+      setShowForm(false);
+      setForm({ glAccount: '', glAccountName: '', targetSystem: 'qbo', externalAccountCode: '', externalAccountName: '' });
+      await loadMappings();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create mapping');
     } finally {
       setSaving(false);
     }
@@ -133,7 +122,7 @@ export default function GlMappingsPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this mapping?')) return;
-    await fetch(`${API_URL}/gl/mappings/${id}`, { method: 'DELETE' });
+    await api.glMappings.remove(id).catch(() => {});
     await loadMappings();
   }
 
