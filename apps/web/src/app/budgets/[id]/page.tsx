@@ -26,6 +26,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const [editForm, setEditForm] = useState({ name: '', totalAmount: '' });
   const [saving, setSaving] = useState(false);
   const [id, setId] = useState('');
+  const [addPeriodOpen, setAddPeriodOpen] = useState(false);
+  const [periodForm, setPeriodForm] = useState({ periodStart: '', periodEnd: '', allocatedAmount: '' });
+  const [periodSaving, setPeriodSaving] = useState(false);
 
   useEffect(() => {
     params.then(({ id: pid }) => {
@@ -54,6 +57,29 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleAddPeriod() {
+    if (!periodForm.periodStart || !periodForm.periodEnd || !periodForm.allocatedAmount) return;
+    setPeriodSaving(true);
+    try {
+      const updated = await api.budgets.addPeriod(id, {
+        periodStart: periodForm.periodStart,
+        periodEnd: periodForm.periodEnd,
+        allocatedAmount: parseFloat(periodForm.allocatedAmount),
+      });
+      setBudget(updated);
+      setAddPeriodOpen(false);
+      setPeriodForm({ periodStart: '', periodEnd: '', allocatedAmount: '' });
+    } catch (e: any) { alert(e.message); } finally { setPeriodSaving(false); }
+  }
+
+  async function handleRemovePeriod(periodId: string) {
+    if (!confirm('Remove this period?')) return;
+    try {
+      const updated = await api.budgets.removePeriod(id, periodId);
+      setBudget(updated);
+    } catch (e: any) { alert(e.message); }
   }
 
   if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Loading…</div>;
@@ -141,15 +167,47 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Budget periods */}
-      {budget.periods && budget.periods.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#111827' }}>Budget Periods</h2>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#111827' }}>Budget Periods ({budget.periods?.length ?? 0})</h2>
+          <button onClick={() => setAddPeriodOpen(!addPeriodOpen)}
+            style={{ background: '#111827', color: '#fff', border: 'none', padding: '0.375rem 0.875rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer' }}>
+            {addPeriodOpen ? 'Cancel' : '+ Add Period'}
+          </button>
+        </div>
+
+        {addPeriodOpen && (
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', alignItems: 'end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: '0.25rem' }}>Period Start</label>
+                <input type="date" value={periodForm.periodStart} onChange={(e) => setPeriodForm((f) => ({ ...f, periodStart: e.target.value }))}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: '0.25rem' }}>Period End</label>
+                <input type="date" value={periodForm.periodEnd} onChange={(e) => setPeriodForm((f) => ({ ...f, periodEnd: e.target.value }))}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#374151', marginBottom: '0.25rem' }}>Allocated Amount</label>
+                <input type="number" min="0" step="0.01" value={periodForm.allocatedAmount} onChange={(e) => setPeriodForm((f) => ({ ...f, allocatedAmount: e.target.value }))}
+                  placeholder="0.00"
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <button onClick={handleAddPeriod} disabled={periodSaving}
+              style={{ marginTop: '0.75rem', background: '#059669', color: '#fff', border: 'none', padding: '0.4rem 1rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 500, cursor: periodSaving ? 'not-allowed' : 'pointer', opacity: periodSaving ? 0.7 : 1 }}>
+              {periodSaving ? 'Adding…' : 'Add Period'}
+            </button>
           </div>
+        )}
+
+        {budget.periods && budget.periods.length > 0 ? (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                {['Period Start', 'Period End', 'Allocated', 'Spent', 'Remaining', 'Utilization'].map((h) => (
+                {['Period Start', 'Period End', 'Allocated', 'Spent', 'Remaining', 'Utilization', ''].map((h) => (
                   <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem' }}>{h}</th>
                 ))}
               </tr>
@@ -174,19 +232,23 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
                         <span style={{ fontSize: '0.75rem', color: '#6b7280', minWidth: '36px' }}>{periodPct.toFixed(0)}%</span>
                       </div>
                     </td>
+                    <td style={{ padding: '0.875rem 1rem' }}>
+                      <button onClick={() => handleRemovePeriod(period.id)}
+                        style={{ background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: '4px', padding: '0.2rem 0.5rem', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        Remove
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {(!budget.periods || budget.periods.length === 0) && (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
-          No budget periods defined for this budget.
-        </div>
-      )}
+        ) : (
+          <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+            No budget periods. Add one above.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
