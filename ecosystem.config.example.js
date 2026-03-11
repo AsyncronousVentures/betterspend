@@ -1,10 +1,18 @@
+// Copy this file to ecosystem.config.js and fill in your values.
+// ecosystem.config.js is gitignored — never commit it.
+//
+// With NGINX path-based routing (recommended), API_URL, WEB_URL, and
+// NEXT_PUBLIC_API_URL all point to the same domain (e.g. https://yourdomain.com).
+// NEXT_PUBLIC_API_URL is baked into the Next.js bundle at build time — rebuild
+// the web app after changing it.
+
 module.exports = {
   apps: [
     {
       name: 'betterspend-api',
       namespace: 'betterspend',
       script: 'apps/api/dist/main.js',
-      cwd: '/home/ubuntu/betterspend',
+      cwd: '/path/to/betterspend',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -12,8 +20,10 @@ module.exports = {
         DATABASE_URL: 'postgresql://betterspend:betterspend@localhost:5433/betterspend',
         REDIS_URL: 'redis://localhost:6379',
         API_PORT: 4001,
-        API_URL: 'http://147.135.36.170:4001',
-        WEB_URL: 'http://147.135.36.170:3100',
+        // With path-based NGINX routing, set both to your public domain:
+        API_URL: 'https://yourdomain.com',
+        WEB_URL: 'https://yourdomain.com',
+        BETTER_AUTH_SECRET: 'change-me-use-openssl-rand-hex-32',
         MINIO_ENDPOINT: 'http://localhost:9000',
         MINIO_ACCESS_KEY: 'minioadmin',
         MINIO_SECRET_KEY: 'minioadmin',
@@ -32,13 +42,14 @@ module.exports = {
       namespace: 'betterspend',
       script: 'node_modules/next/dist/bin/next',
       args: 'start',
-      cwd: '/home/ubuntu/betterspend/apps/web',
+      cwd: '/path/to/betterspend/apps/web',
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3100,
-        NEXT_PUBLIC_API_URL: 'http://147.135.36.170:4001',
+        // Must match API_URL above. Rebuild web after changing this.
+        NEXT_PUBLIC_API_URL: 'https://yourdomain.com',
       },
       log_file: '/home/ubuntu/.pm2/logs/betterspend-web.log',
       error_file: '/home/ubuntu/.pm2/logs/betterspend-web-error.log',
