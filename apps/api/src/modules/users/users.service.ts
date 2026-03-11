@@ -1,8 +1,27 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
+import { randomUUID, scrypt, randomBytes } from 'crypto';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
-import { users, userRoles } from '@betterspend/db';
+import { users, userRoles, authAccounts } from '@betterspend/db';
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  // Node's scrypt: promisified version takes (password, salt, keylen, callback)
+  // Options must be passed via the promisified wrapper differently
+  return new Promise((resolve, reject) => {
+    scrypt(
+      Buffer.from(password.normalize('NFKC')),
+      salt,
+      64,
+      { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 },
+      (err, key) => {
+        if (err) reject(err);
+        else resolve(`${salt}:${key.toString('hex')}`);
+      },
+    );
+  });
+}
 
 @Injectable()
 export class UsersService {
@@ -64,5 +83,34 @@ export class UsersService {
     await this.db
       .delete(userRoles)
       .where(and(eq(userRoles.id, roleId), eq(userRoles.userId, userId)));
+  }
+
+  async create(organizationId: string, data: { name: string; email: string; password: string; role?: string }) {
+    const existing = await this.db.query.users.findFirst({ where: eq(users.email, data.email) });
+    if (existing) throw new ConflictException(`Email ${data.email} is already in use`);
+
+    const userId = randomUUID();
+    const [user] = await this.db.insert(users).values({
+      id: userId,
+      organizationId,
+      email: data.email,
+      name: data.name,
+      emailVerified: true,
+    }).returning();
+
+    const hashed = await hashPassword(data.password);
+    await this.db.insert(authAccounts).values({
+      id: randomUUID(),
+      userId,
+      accountId: data.email,
+      providerId: 'credential',
+      password: hashed,
+    });
+
+    if (data.role) {
+      await this.db.insert(userRoles).values({ userId, role: data.role, scopeType: 'global' });
+    }
+
+    return this.findOne(userId, organizationId);
   }
 }
