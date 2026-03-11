@@ -227,6 +227,9 @@ export const api = {
     recentActivity: () => apiFetch<any[]>('/analytics/recent-activity'),
     vendorPerformance: () => apiFetch<any[]>('/analytics/vendor-performance'),
     budgetUtilization: () => apiFetch<any[]>('/analytics/budget-utilization'),
+    spendByCategory: () => apiFetch<any[]>('/analytics/spend/by-category'),
+    spendAnomalies: () => apiFetch<any[]>('/analytics/spend/anomalies'),
+    categoryTrend: () => apiFetch<any[]>('/analytics/spend/category-trend'),
   },
   search: {
     query: (q: string) => apiFetch<any>(`/search?q=${encodeURIComponent(q)}`),

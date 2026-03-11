@@ -254,6 +254,102 @@ export class AnalyticsService {
     return rows;
   }
 
+  /** Spend by GL/catalog category (from approved invoices via invoice lines → PO lines → catalog items) */
+  async spendByCategory(organizationId: string) {
+    return this.db.execute(sql`
+      SELECT
+        COALESCE(ci.category, 'Uncategorized') AS category,
+        SUM(il.total_price::numeric)           AS total,
+        COUNT(DISTINCT i.id)::int              AS "invoiceCount",
+        COUNT(il.id)::int                      AS "lineCount"
+      FROM invoice_lines il
+      JOIN invoices i ON i.id = il.invoice_id
+      LEFT JOIN po_lines pl ON pl.id = il.po_line_id
+      LEFT JOIN catalog_items ci ON ci.id = pl.catalog_item_id
+      WHERE i.organization_id = ${organizationId}
+        AND i.status IN ('approved', 'paid')
+      GROUP BY ci.category
+      ORDER BY total DESC
+      LIMIT 20
+    `);
+  }
+
+  /** Spend anomaly detection: vendors with invoice amount > 2x their rolling 3-month average */
+  async spendAnomalies(organizationId: string) {
+    return this.db.execute(sql`
+      WITH monthly_vendor_spend AS (
+        SELECT
+          v.id   AS "vendorId",
+          v.name AS "vendorName",
+          DATE_TRUNC('month', i.invoice_date) AS month,
+          SUM(i.total_amount::numeric)        AS monthly_total
+        FROM invoices i
+        JOIN vendors v ON v.id = i.vendor_id
+        WHERE i.organization_id = ${organizationId}
+          AND i.status IN ('approved', 'paid')
+          AND i.invoice_date >= NOW() - INTERVAL '6 months'
+        GROUP BY v.id, v.name, DATE_TRUNC('month', i.invoice_date)
+      ),
+      vendor_stats AS (
+        SELECT
+          "vendorId",
+          "vendorName",
+          AVG(monthly_total)    AS avg_monthly,
+          STDDEV(monthly_total) AS stddev_monthly,
+          MAX(monthly_total)    AS max_monthly,
+          MAX(month)            AS latest_month,
+          COUNT(*)              AS month_count
+        FROM monthly_vendor_spend
+        GROUP BY "vendorId", "vendorName"
+      )
+      SELECT
+        "vendorId",
+        "vendorName",
+        ROUND(avg_monthly, 2)    AS "avgMonthlySpend",
+        ROUND(max_monthly, 2)    AS "maxMonthlySpend",
+        ROUND(max_monthly / NULLIF(avg_monthly, 0), 2) AS "peakToAvgRatio",
+        month_count              AS "monthsOfData"
+      FROM vendor_stats
+      WHERE month_count >= 2
+        AND max_monthly > avg_monthly * 2
+        AND max_monthly > 1000
+      ORDER BY "peakToAvgRatio" DESC
+      LIMIT 10
+    `);
+  }
+
+  /** Top spending categories for current quarter vs previous quarter */
+  async categoryTrend(organizationId: string) {
+    return this.db.execute(sql`
+      WITH quarterly AS (
+        SELECT
+          COALESCE(ci.category, 'Uncategorized') AS category,
+          CASE
+            WHEN i.invoice_date >= DATE_TRUNC('quarter', NOW()) THEN 'current'
+            WHEN i.invoice_date >= DATE_TRUNC('quarter', NOW()) - INTERVAL '3 months' THEN 'previous'
+          END AS period,
+          SUM(il.total_price::numeric) AS total
+        FROM invoice_lines il
+        JOIN invoices i ON i.id = il.invoice_id
+        LEFT JOIN po_lines pl ON pl.id = il.po_line_id
+        LEFT JOIN catalog_items ci ON ci.id = pl.catalog_item_id
+        WHERE i.organization_id = ${organizationId}
+          AND i.status IN ('approved', 'paid')
+          AND i.invoice_date >= DATE_TRUNC('quarter', NOW()) - INTERVAL '3 months'
+        GROUP BY ci.category, period
+      )
+      SELECT
+        category,
+        MAX(CASE WHEN period = 'current' THEN total ELSE 0 END)  AS "currentQtr",
+        MAX(CASE WHEN period = 'previous' THEN total ELSE 0 END) AS "previousQtr"
+      FROM quarterly
+      WHERE period IS NOT NULL
+      GROUP BY category
+      ORDER BY "currentQtr" DESC
+      LIMIT 10
+    `);
+  }
+
   /** Recent activity from audit log */
   async recentActivity(organizationId: string, limit = 20) {
     return this.db.execute(sql`

@@ -73,6 +73,8 @@ export default function AnalyticsPage() {
   const [cycle,      setCycle]      = useState<CycleRow | null>(null);
   const [vendPerf,   setVendPerf]   = useState<VendorPerfRow[]>([]);
   const [budgetUtil, setBudgetUtil] = useState<BudgetUtilRow[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [anomalies,  setAnomalies]  = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
@@ -85,10 +87,12 @@ export default function AnalyticsPage() {
       api.analytics.poCycleTime() as Promise<CycleRow>,
       api.analytics.vendorPerformance() as Promise<VendorPerfRow[]>,
       api.analytics.budgetUtilization() as Promise<BudgetUtilRow[]>,
+      api.analytics.spendByCategory(),
+      api.analytics.spendAnomalies(),
     ])
-      .then(([k, v, d, m, a, c, vp, bu]) => {
+      .then(([k, v, d, m, a, c, vp, bu, cat, anom]) => {
         setKpis(k); setVendors(v); setDepts(d); setMonthly(m); setAging(a); setCycle(c);
-        setVendPerf(vp); setBudgetUtil(bu);
+        setVendPerf(vp); setBudgetUtil(bu); setCategories(cat); setAnomalies(anom);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -335,6 +339,53 @@ export default function AnalyticsPage() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Spend by Category + Anomalies */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+        {/* Category breakdown */}
+        <div style={card}>
+          <h2 style={sectionTitle}>Spend by Category</h2>
+          {categories.length === 0 ? (
+            <Empty text="No categorized spend data yet. Assign categories to catalog items to see this chart." />
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(categories.length * 36, 160)}>
+              <BarChart layout="vertical" data={categories.map((c: any) => ({ name: c.category, total: Number(c.total) }))} margin={{ top: 0, right: 16, left: 0, bottom: 0 }} barSize={14}>
+                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.tableBorder} horizontal={false} />
+                <XAxis type="number" tickFormatter={fmtShort} tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: COLORS.textSecondary }} width={120} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="total" fill="#8b5cf6" radius={[0, 3, 3, 0]} name="Spend" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Spend anomalies */}
+        <div style={card}>
+          <h2 style={sectionTitle}>Spend Anomalies</h2>
+          <p style={{ fontSize: '0.8rem', color: COLORS.textSecondary, marginTop: '-0.5rem', marginBottom: '1rem' }}>
+            Vendors with a monthly peak more than 2× their average
+          </p>
+          {anomalies.length === 0 ? (
+            <Empty text="No anomalies detected. All vendor spend is within normal range." />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {anomalies.map((a: any) => (
+                <div key={a.vendorId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0.875rem', background: '#fff7ed', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                  <div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: COLORS.textPrimary }}>{a.vendorName}</div>
+                    <div style={{ fontSize: '0.75rem', color: COLORS.textMuted }}>avg {fmt(a.avgMonthlySpend)}/mo</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#c2410c' }}>{a.peakToAvgRatio}×</div>
+                    <div style={{ fontSize: '0.75rem', color: COLORS.textMuted }}>peak/avg</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

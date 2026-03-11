@@ -67,4 +67,22 @@ export class AnalyticsController {
   recentActivity(@CurrentOrgId() orgId: string) {
     return this.analyticsService.recentActivity(orgId);
   }
+
+  @Get('spend/by-category')
+  @ApiOperation({ summary: 'Spend breakdown by catalog category (approved invoices)' })
+  spendByCategory(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.spendByCategory(orgId);
+  }
+
+  @Get('spend/anomalies')
+  @ApiOperation({ summary: 'Vendors with spend anomalies (>2x rolling average)' })
+  spendAnomalies(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.spendAnomalies(orgId);
+  }
+
+  @Get('spend/category-trend')
+  @ApiOperation({ summary: 'Category spend: current quarter vs previous quarter' })
+  categoryTrend(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.categoryTrend(orgId);
+  }
 }
