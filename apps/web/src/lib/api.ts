@@ -322,4 +322,11 @@ export const api = {
     submitInvoice: (token: string, data: unknown) => apiFetch<any>(`/vendor-portal/invoice?token=${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify(data) }),
     listInvoices: (token: string) => apiFetch<any[]>(`/vendor-portal/invoices?token=${encodeURIComponent(token)}`),
   },
+  approvalDelegations: {
+    list: () => apiFetch<any[]>('/approval-delegations'),
+    my: () => apiFetch<any[]>('/approval-delegations/my'),
+    delegateForMe: () => apiFetch<any[]>('/approval-delegations/delegate-for-me'),
+    create: (data: unknown) => apiFetch<any>('/approval-delegations', { method: 'POST', body: JSON.stringify(data) }),
+    cancel: (id: string) => apiFetch<void>(`/approval-delegations/${id}`, { method: 'DELETE' }),
+  },
 };

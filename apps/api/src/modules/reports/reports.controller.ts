@@ -1,4 +1,4 @@
-import { Controller, Get, Res, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Res, Query, Body, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportsService } from './reports.service';
@@ -10,6 +10,67 @@ import { Roles } from '../../common/decorators/roles.decorator';
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
+
+  // ─── Custom Report Builder ──────────────────────────────────────────────
+
+  @Get('custom')
+  @ApiOperation({ summary: 'Run a custom report' })
+  @ApiQuery({ name: 'reportType', required: true, enum: ['spend_by_vendor', 'spend_by_department', 'spend_by_category', 'po_status_summary', 'invoice_aging', 'approval_cycle_time'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'groupBy', required: false, enum: ['month', 'quarter', 'vendor', 'department'] })
+  @ApiQuery({ name: 'format', required: false, enum: ['json', 'csv'] })
+  async runCustomReport(
+    @CurrentOrgId() orgId: string,
+    @Res() res: Response,
+    @Query('reportType') reportType: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('groupBy') groupBy?: string,
+    @Query('format') format?: string,
+  ) {
+    const rows = await this.reportsService.runCustomReport(orgId, {
+      reportType,
+      startDate,
+      endDate,
+      groupBy,
+    });
+
+    if (format === 'csv') {
+      const csv = this.reportsService.toCsvPublic(rows);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${reportType}-${new Date().toISOString().slice(0, 10)}.csv"`);
+      return res.send(csv);
+    }
+
+    return res.json(rows);
+  }
+
+  // ─── Saved Reports ──────────────────────────────────────────────────────
+
+  @Get('saved')
+  @ApiOperation({ summary: 'List saved report configurations' })
+  listSavedReports() {
+    return this.reportsService.listSavedReports();
+  }
+
+  @Post('saved')
+  @ApiOperation({ summary: 'Save a report configuration' })
+  saveReport(
+    @Body() body: { name: string; reportType: string; filters: Record<string, unknown>; groupBy?: string },
+  ) {
+    return this.reportsService.saveReport(body);
+  }
+
+  @Delete('saved/:id')
+  @ApiOperation({ summary: 'Delete a saved report configuration' })
+  deleteSavedReport(@Param('id') id: string) {
+    const deleted = this.reportsService.deleteSavedReport(id);
+    if (!deleted) throw new NotFoundException('Saved report not found');
+    return { success: true };
+  }
+
+  // ─── Existing CSV exports (preserved) ───────────────────────────────────
 
   @Get('purchase-orders/csv')
   @ApiOperation({ summary: 'Export purchase orders as CSV' })

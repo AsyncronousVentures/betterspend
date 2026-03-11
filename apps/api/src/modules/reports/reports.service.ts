@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { sql, eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
-import { purchaseOrders, invoices, requisitions } from '@betterspend/db';
+import { randomUUID } from 'crypto';
 
 function toCsv(rows: Record<string, unknown>[]): string {
   if (!rows.length) return '';
@@ -19,9 +19,210 @@ function toCsv(rows: Record<string, unknown>[]): string {
   return lines.join('\n');
 }
 
+export interface SavedReport {
+  id: string;
+  name: string;
+  reportType: string;
+  filters: Record<string, unknown>;
+  groupBy?: string;
+  createdAt: string;
+}
+
+export interface CustomReportParams {
+  reportType: string;
+  startDate?: string;
+  endDate?: string;
+  groupBy?: string;
+}
+
 @Injectable()
 export class ReportsService {
   constructor(@Inject(DB_TOKEN) private readonly db: Db) {}
+
+  // In-memory saved reports store
+  private savedReports: SavedReport[] = [];
+
+  // ─── Saved Reports CRUD ───────────────────────────────────────────────────
+
+  listSavedReports(): SavedReport[] {
+    return this.savedReports;
+  }
+
+  saveReport(data: { name: string; reportType: string; filters: Record<string, unknown>; groupBy?: string }): SavedReport {
+    const report: SavedReport = {
+      id: randomUUID(),
+      name: data.name,
+      reportType: data.reportType,
+      filters: data.filters ?? {},
+      groupBy: data.groupBy,
+      createdAt: new Date().toISOString(),
+    };
+    this.savedReports.push(report);
+    return report;
+  }
+
+  deleteSavedReport(id: string): boolean {
+    const idx = this.savedReports.findIndex((r) => r.id === id);
+    if (idx === -1) return false;
+    this.savedReports.splice(idx, 1);
+    return true;
+  }
+
+  // ─── Custom Report Runner ─────────────────────────────────────────────────
+
+  async runCustomReport(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    switch (params.reportType) {
+      case 'spend_by_vendor':
+        return this.customSpendByVendor(orgId, params);
+      case 'spend_by_department':
+        return this.customSpendByDepartment(orgId, params);
+      case 'spend_by_category':
+        return this.customSpendByCategory(orgId, params);
+      case 'po_status_summary':
+        return this.customPoStatusSummary(orgId, params);
+      case 'invoice_aging':
+        return this.customInvoiceAging(orgId, params);
+      case 'approval_cycle_time':
+        return this.customApprovalCycleTime(orgId, params);
+      default:
+        return [];
+    }
+  }
+
+  private async customSpendByVendor(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const startDate = params.startDate ?? null;
+    const endDate = params.endDate ?? null;
+    const rows = await this.db.execute(sql`
+      SELECT
+        v.name                                       AS "vendor",
+        v.code                                       AS "vendorCode",
+        COUNT(DISTINCT i.id)::int                    AS "invoiceCount",
+        SUM(i.total_amount)::numeric                 AS "totalSpend",
+        MIN(i.invoice_date)::text                    AS "firstInvoice",
+        MAX(i.invoice_date)::text                    AS "lastInvoice"
+      FROM invoices i
+      JOIN vendors v ON v.id = i.vendor_id
+      WHERE i.organization_id = ${orgId}
+        AND i.status NOT IN ('cancelled')
+        ${startDate ? sql`AND i.created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND i.created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY v.id, v.name, v.code
+      ORDER BY "totalSpend" DESC NULLS LAST
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  private async customSpendByDepartment(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const startDate = params.startDate ?? null;
+    const endDate = params.endDate ?? null;
+    const rows = await this.db.execute(sql`
+      SELECT
+        COALESCE(d.name, 'Unassigned')               AS "department",
+        COUNT(DISTINCT po.id)::int                   AS "poCount",
+        SUM(po.total_amount)::numeric                AS "totalSpend"
+      FROM purchase_orders po
+      LEFT JOIN requisitions r  ON r.id = po.requisition_id
+      LEFT JOIN departments  d  ON d.id = r.department_id
+      WHERE po.organization_id = ${orgId}
+        AND po.status NOT IN ('draft', 'cancelled')
+        ${startDate ? sql`AND po.created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND po.created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY d.name
+      ORDER BY "totalSpend" DESC NULLS LAST
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  private async customSpendByCategory(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const startDate = params.startDate ?? null;
+    const endDate = params.endDate ?? null;
+    const rows = await this.db.execute(sql`
+      SELECT
+        COALESCE(ci.category, 'Uncategorized')       AS "category",
+        COUNT(DISTINCT il.id)::int                   AS "lineCount",
+        SUM(il.line_total)::numeric                  AS "totalSpend"
+      FROM invoice_lines il
+      JOIN invoices i ON i.id = il.invoice_id
+      LEFT JOIN catalog_items ci ON ci.id = il.catalog_item_id
+      WHERE i.organization_id = ${orgId}
+        AND i.status NOT IN ('cancelled')
+        ${startDate ? sql`AND i.created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND i.created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY ci.category
+      ORDER BY "totalSpend" DESC NULLS LAST
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  private async customPoStatusSummary(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const startDate = params.startDate ?? null;
+    const endDate = params.endDate ?? null;
+    const rows = await this.db.execute(sql`
+      SELECT
+        po.status                                    AS "status",
+        COUNT(*)::int                                AS "count",
+        SUM(po.total_amount)::numeric                AS "totalAmount"
+      FROM purchase_orders po
+      WHERE po.organization_id = ${orgId}
+        ${startDate ? sql`AND po.created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND po.created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY po.status
+      ORDER BY "count" DESC
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  private async customInvoiceAging(orgId: string, _params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const rows = await this.db.execute(sql`
+      SELECT
+        CASE
+          WHEN i.due_date IS NULL OR i.due_date > NOW() THEN 'Current (<30d)'
+          WHEN NOW() - i.due_date <= INTERVAL '30 days'  THEN 'Current (<30d)'
+          WHEN NOW() - i.due_date <= INTERVAL '60 days'  THEN '30-60 days'
+          WHEN NOW() - i.due_date <= INTERVAL '90 days'  THEN '60-90 days'
+          ELSE '>90 days'
+        END                                          AS "agingBucket",
+        COUNT(*)::int                                AS "invoiceCount",
+        SUM(i.total_amount)::numeric                 AS "totalAmount"
+      FROM invoices i
+      WHERE i.organization_id = ${orgId}
+        AND i.status NOT IN ('paid', 'cancelled')
+      GROUP BY "agingBucket"
+      ORDER BY "agingBucket"
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  private async customApprovalCycleTime(orgId: string, params: CustomReportParams): Promise<Record<string, unknown>[]> {
+    const startDate = params.startDate ?? null;
+    const endDate = params.endDate ?? null;
+    const groupBy = params.groupBy ?? 'month';
+
+    let periodExpr: ReturnType<typeof sql>;
+    if (groupBy === 'quarter') {
+      periodExpr = sql`TO_CHAR(DATE_TRUNC('quarter', r.created_at), 'YYYY"Q"Q')`;
+    } else {
+      periodExpr = sql`TO_CHAR(DATE_TRUNC('month', r.created_at), 'YYYY-MM')`;
+    }
+
+    const rows = await this.db.execute(sql`
+      SELECT
+        ${periodExpr}                                AS "period",
+        COUNT(DISTINCT po.id)::int                   AS "poCount",
+        ROUND(AVG(EXTRACT(EPOCH FROM (po.issued_at - r.created_at)) / 86400)::numeric, 1) AS "avgCycleDays"
+      FROM purchase_orders po
+      JOIN requisitions r ON r.id = po.requisition_id
+      WHERE po.organization_id = ${orgId}
+        AND po.issued_at IS NOT NULL
+        ${startDate ? sql`AND r.created_at >= ${startDate}::timestamptz` : sql``}
+        ${endDate ? sql`AND r.created_at <= ${endDate}::timestamptz` : sql``}
+      GROUP BY "period"
+      ORDER BY "period"
+    `);
+    return rows as Record<string, unknown>[];
+  }
+
+  // ─── Existing CSV exports (preserved) ─────────────────────────────────────
 
   async exportPOs(organizationId: string, status?: string): Promise<string> {
     const rows = await this.db.execute(sql`
@@ -195,5 +396,9 @@ export class ReportsService {
       ORDER BY gr.received_at DESC
     `);
     return toCsv(rows as Record<string, unknown>[]);
+  }
+
+  toCsvPublic(rows: Record<string, unknown>[]): string {
+    return toCsv(rows);
   }
 }
