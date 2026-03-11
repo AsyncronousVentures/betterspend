@@ -222,6 +222,7 @@ export class PurchaseOrdersService {
       .set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(purchaseOrders.id, id))
       .returning();
+    this.webhookEvents.emit(organizationId, 'po.cancelled', { purchaseOrderId: id });
     return updated;
   }
 

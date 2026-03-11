@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@betterspend/db": "workspace:*",
     "@betterspend/shared": "workspace:*",
     "@nestjs/common": "^10.0.0",

@@ -3,10 +3,19 @@ import { WebhooksService } from './webhooks.service';
 
 export type WebhookEventType =
   | 'requisition.submitted'
+  | 'requisition.approved'
+  | 'requisition.rejected'
   | 'po.issued'
+  | 'po.approved'
+  | 'po.rejected'
+  | 'po.cancelled'
   | 'grn.created'
   | 'invoice.matched'
-  | 'invoice.approved';
+  | 'invoice.exception'
+  | 'invoice.approved'
+  | 'approval.requested'
+  | 'approval.approved'
+  | 'approval.rejected';
 
 @Injectable()
 export class WebhookEventService {

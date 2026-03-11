@@ -9,9 +9,10 @@ import { CurrentUserId } from '../../common/decorators/current-user-id.decorator
 interface SubmitOcrJobDto {
   filename: string;
   contentType: string;
-  /** In production this is the MinIO object key returned after upload.
-   *  For now the client sends the key it receives from a future presigned-URL upload flow. */
+  /** MinIO object key OR 'inline' when base64Data is provided */
   storageKey: string;
+  /** Base64-encoded file content for direct inline upload (no MinIO required) */
+  base64Data?: string;
 }
 
 @ApiTags('ocr')
@@ -44,6 +45,7 @@ export class OcrController {
       filename: body.filename,
       contentType: body.contentType,
       storageKey: body.storageKey,
+      base64Data: body.base64Data,
     });
   }
 
