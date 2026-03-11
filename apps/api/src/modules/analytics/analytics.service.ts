@@ -191,6 +191,61 @@ export class AnalyticsService {
     };
   }
 
+  /** Vendor performance metrics */
+  async vendorPerformance(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        v.id                                                                   AS "vendorId",
+        v.name                                                                 AS "vendorName",
+        COUNT(DISTINCT i.id)::int                                              AS "invoiceCount",
+        COUNT(DISTINCT CASE WHEN i.match_status = 'exception' THEN i.id END)::int AS "exceptionCount",
+        ROUND(
+          COUNT(DISTINCT CASE WHEN i.match_status = 'exception' THEN i.id END)::numeric
+          / NULLIF(COUNT(DISTINCT i.id), 0) * 100, 1
+        )                                                                      AS "exceptionRate",
+        ROUND(AVG(
+          CASE WHEN i.status = 'approved' AND i.due_date IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (i.updated_at - i.invoice_date)) / 86400
+          END
+        )::numeric, 1)                                                         AS "avgDaysToApprove",
+        COALESCE(SUM(CASE WHEN i.status = 'approved' THEN i.total_amount END), 0)::numeric AS "totalApproved",
+        COUNT(DISTINCT po.id)::int                                             AS "poCount"
+      FROM vendors v
+      LEFT JOIN invoices i  ON i.vendor_id = v.id AND i.organization_id = ${organizationId}
+      LEFT JOIN purchase_orders po ON po.vendor_id = v.id AND po.organization_id = ${organizationId}
+      WHERE v.organization_id = ${organizationId}
+      GROUP BY v.id, v.name
+      HAVING COUNT(DISTINCT i.id) > 0 OR COUNT(DISTINCT po.id) > 0
+      ORDER BY "totalApproved" DESC
+      LIMIT 50
+    `);
+    return rows;
+  }
+
+  /** Budget utilization across all active budgets */
+  async budgetUtilization(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        b.id                                                   AS "budgetId",
+        b.name                                                 AS "budgetName",
+        b.budget_type                                          AS "budgetType",
+        b.fiscal_year                                          AS "fiscalYear",
+        b.total_amount::numeric                                AS "totalAmount",
+        b.spent_amount::numeric                                AS "spentAmount",
+        ROUND((b.spent_amount / NULLIF(b.total_amount, 0)) * 100, 1) AS "utilizationPct",
+        (b.total_amount - b.spent_amount)::numeric             AS "remaining",
+        d.name                                                 AS "departmentName",
+        p.name                                                 AS "projectName"
+      FROM budgets b
+      LEFT JOIN departments d ON d.id = b.department_id
+      LEFT JOIN projects    p ON p.id = b.project_id
+      WHERE b.organization_id = ${organizationId}
+        AND b.fiscal_year = EXTRACT(YEAR FROM NOW())::int
+      ORDER BY "utilizationPct" DESC NULLS LAST
+    `);
+    return rows;
+  }
+
   /** Recent activity from audit log */
   async recentActivity(organizationId: string, limit = 20) {
     return this.db.execute(sql`
