@@ -74,6 +74,7 @@ const NAV_CONFIG: NavEntry[] = [
     label: 'Organization',
     children: [
       { label: 'Vendors', href: '/vendors' },
+      { label: 'Supplier Scorecard', href: '/supplier-scorecard' },
       { label: 'Contracts', href: '/contracts' },
       { label: 'Users', href: '/users' },
       { label: 'Departments', href: '/departments' },

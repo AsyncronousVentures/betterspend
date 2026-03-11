@@ -195,6 +195,27 @@ export const api = {
       const url = `${API_BASE}/api/v1/reports/${type}${q.toString() ? '?' + q : ''}`;
       return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     },
+    customReport: (params: { reportType: string; startDate?: string; endDate?: string; groupBy?: string }) => {
+      const filtered: Record<string, string> = {};
+      for (const [k, v] of Object.entries(params)) {
+        if (v) filtered[k] = v;
+      }
+      return apiFetch<any[]>('/reports/custom?' + new URLSearchParams(filtered));
+    },
+    customReportCsv: (params: { reportType: string; startDate?: string; endDate?: string; groupBy?: string }) => {
+      const filtered: Record<string, string> = { format: 'csv' };
+      for (const [k, v] of Object.entries(params)) {
+        if (v) filtered[k] = v;
+      }
+      const token = getCookie('bs_token');
+      const url = `${API_BASE}/api/v1/reports/custom?` + new URLSearchParams(filtered);
+      return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    },
+    savedReports: {
+      list: () => apiFetch<any[]>('/reports/saved'),
+      save: (data: unknown) => apiFetch<any>('/reports/saved', { method: 'POST', body: JSON.stringify(data) }),
+      delete: (id: string) => apiFetch<void>(`/reports/saved/${id}`, { method: 'DELETE' }),
+    },
   },
   auth: {
     changePassword: (data: { currentPassword: string; newPassword: string }) => {
@@ -289,6 +310,10 @@ export const api = {
     getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),
     updateBranding: (data: unknown) => apiFetch<any>('/settings/branding', { method: 'PUT', body: JSON.stringify(data) }),
     updateSmtp: (data: unknown) => apiFetch<any>('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  supplierScorecard: {
+    list: (params?: { limit?: number }) => apiFetch<any[]>('/supplier-scorecard' + (params?.limit ? `?limit=${params.limit}` : '')),
+    get: (vendorId: string) => apiFetch<any>(`/supplier-scorecard/${vendorId}`),
   },
   vendorPortal: {
     sendAccess: (vendorId: string) => apiFetch<{ success: boolean }>('/vendor-portal/access', { method: 'POST', body: JSON.stringify({ vendorId }) }),

@@ -33,6 +33,9 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { StorageModule } from './common/storage/storage.module';
 import { VendorPortalModule } from './modules/vendor-portal/vendor-portal.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SupplierScorecardModule } from './modules/supplier-scorecard/supplier-scorecard.module';
+import { ApprovalDelegationsModule } from './modules/approval-delegations/approval-delegations.module';
+import { RfqModule } from './modules/rfq/rfq.module';
 
 @Module({
   imports: [
@@ -70,6 +73,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     PasswordResetModule,
     DocumentsModule,
     VendorPortalModule,
+    SupplierScorecardModule,
+    ApprovalDelegationsModule,
+    RfqModule,
   ],
 })
 export class AppModule {}
