@@ -71,7 +71,9 @@ export default function BudgetsPage() {
                 const isOverBudget = pct > 90;
                 return (
                   <tr key={budget.id} style={{ borderBottom: idx < budgets.length - 1 ? '1px solid #f3f4f6' : undefined }}>
-                    <td style={{ padding: '0.875rem 1rem', fontWeight: 600, color: '#111827' }}>{budget.name}</td>
+                    <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
+                      <Link href={`/budgets/${budget.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{budget.name}</Link>
+                    </td>
                     <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{budget.fiscalYear}</td>
                     <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{formatCurrency(budget.totalAmount, currency)}</td>
                     <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{formatCurrency(budget.spentAmount, currency)}</td>
