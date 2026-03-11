@@ -14,6 +14,7 @@ import { ocrJobs } from './schema/ocr';
 import { authSessions, authAccounts } from './schema/auth';
 import { contracts, contractLines, contractAmendments } from './schema/contracts';
 import { systemSettings } from './schema/system-settings';
+import { vendorPortalTokens } from './schema/vendor-portal-tokens';
 
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -195,4 +196,8 @@ export const contractAmendmentsRelations = relations(contractAmendments, ({ one 
 
 export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
   organization: one(organizations, { fields: [systemSettings.organizationId], references: [organizations.id] }),
+}));
+
+export const vendorPortalTokensRelations = relations(vendorPortalTokens, ({ one }) => ({
+  vendor: one(vendors, { fields: [vendorPortalTokens.vendorId], references: [vendors.id] }),
 }));

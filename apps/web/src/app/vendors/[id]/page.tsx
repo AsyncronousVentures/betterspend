@@ -5,9 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { COLORS, SHADOWS } from '../../../lib/theme';
+import { useToast } from '../../../components/toast';
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
   const [vendor, setVendor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -15,6 +17,7 @@ export default function VendorDetailPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState<any>({});
   const [txns, setTxns] = useState<{ invoices: any[]; purchaseOrders: any[] } | null>(null);
+  const [sendingAccess, setSendingAccess] = useState(false);
 
   useEffect(() => {
     api.vendors.get(id).then((v) => {
@@ -62,6 +65,18 @@ export default function VendorDetailPage() {
 
   const [punchoutSaving, setPunchoutSaving] = useState(false);
 
+  async function handleSendPortalAccess() {
+    setSendingAccess(true);
+    try {
+      await api.vendorPortal.sendAccess(id);
+      toast('Portal access link sent to vendor.', 'success');
+    } catch (e: any) {
+      toast(e.message || 'Failed to send access link.', 'error');
+    } finally {
+      setSendingAccess(false);
+    }
+  }
+
   const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
     active: { bg: '#dcfce7', text: '#15803d' },
     inactive: { bg: COLORS.hoverBg, text: COLORS.textSecondary },
@@ -98,9 +113,27 @@ export default function VendorDetailPage() {
             </span>
           </div>
           {!editing && (
-            <button onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
-              Edit
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleSendPortalAccess}
+                disabled={sendingAccess}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  cursor: sendingAccess ? 'not-allowed' : 'pointer',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                }}
+              >
+                {sendingAccess ? 'Sending...' : 'Send Portal Access Link'}
+              </button>
+              <button onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
+                Edit
+              </button>
+            </div>
           )}
         </div>
       </div>
