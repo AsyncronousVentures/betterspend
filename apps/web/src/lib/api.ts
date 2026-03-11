@@ -276,9 +276,4 @@ export const api = {
     updateBranding: (data: unknown) => apiFetch<any>('/settings/branding', { method: 'PUT', body: JSON.stringify(data) }),
     updateSmtp: (data: unknown) => apiFetch<any>('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
   },
-  gl: {
-    oauthStatus: () => apiFetch<{ qbo: boolean; xero: boolean; qboRealmId?: string; xeroTenantId?: string }>('/gl/oauth/status'),
-    oauthConnect: (system: 'qbo' | 'xero') => apiFetch<{ url: string }>(`/gl/oauth/${system}/connect`),
-    oauthDisconnect: (system: 'qbo' | 'xero') => apiFetch<void>(`/gl/oauth/${system}`, { method: 'DELETE' }),
-  },
 };
