@@ -6,6 +6,7 @@ import SidebarNav from './sidebar-nav';
 import { api } from '../lib/api';
 import { COLORS, SHADOWS } from '../lib/theme';
 import { useIsMobile } from '../lib/use-media-query';
+import { useBranding } from '../lib/branding';
 
 const AUTH_PATHS = ['/login', '/signup', '/punchout'];
 
@@ -208,6 +209,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isAuthPage = AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const branding = useBranding();
 
   // Close sidebar on navigation (mobile)
   useEffect(() => {
@@ -252,14 +254,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           flexShrink: 0,
         }}
       >
-        <span style={{
-          fontWeight: 700,
-          fontSize: '1.0625rem',
-          color: COLORS.sidebarTextActive,
-          letterSpacing: '-0.02em',
-        }}>
-          BetterSpend
-        </span>
+        {branding.app_logo_url ? (
+          <img src={branding.app_logo_url} alt={branding.app_name} style={{ maxHeight: '32px', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        ) : (
+          <span style={{
+            fontWeight: 700,
+            fontSize: '1.0625rem',
+            color: COLORS.sidebarTextActive,
+            letterSpacing: '-0.02em',
+          }}>
+            {branding.app_name}
+          </span>
+        )}
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(false)}

@@ -12,6 +12,8 @@ import { webhookEndpoints, webhookDeliveries } from './schema/webhooks';
 import { glMappings, glExportJobs } from './schema/gl';
 import { ocrJobs } from './schema/ocr';
 import { authSessions, authAccounts } from './schema/auth';
+import { contracts, contractLines, contractAmendments } from './schema/contracts';
+import { systemSettings } from './schema/system-settings';
 
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -171,4 +173,26 @@ export const authSessionsRelations = relations(authSessions, ({ one }) => ({
 
 export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
   user: one(users, { fields: [authAccounts.userId], references: [users.id] }),
+}));
+
+export const contractsRelations = relations(contracts, ({ one, many }) => ({
+  organization: one(organizations, { fields: [contracts.organizationId], references: [organizations.id] }),
+  vendor: one(vendors, { fields: [contracts.vendorId], references: [vendors.id] }),
+  owner: one(users, { fields: [contracts.ownerId], references: [users.id], relationName: 'contractOwner' }),
+  createdByUser: one(users, { fields: [contracts.createdBy], references: [users.id], relationName: 'contractCreatedBy' }),
+  lines: many(contractLines),
+  amendments: many(contractAmendments),
+}));
+
+export const contractLinesRelations = relations(contractLines, ({ one }) => ({
+  contract: one(contracts, { fields: [contractLines.contractId], references: [contracts.id] }),
+}));
+
+export const contractAmendmentsRelations = relations(contractAmendments, ({ one }) => ({
+  contract: one(contracts, { fields: [contractAmendments.contractId], references: [contracts.id] }),
+  createdByUser: one(users, { fields: [contractAmendments.createdBy], references: [users.id] }),
+}));
+
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+  organization: one(organizations, { fields: [systemSettings.organizationId], references: [organizations.id] }),
 }));

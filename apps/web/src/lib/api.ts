@@ -226,4 +226,27 @@ export const api = {
   search: {
     query: (q: string) => apiFetch<any>(`/search?q=${encodeURIComponent(q)}`),
   },
+  contracts: {
+    list: (params?: { status?: string; vendorId?: string; type?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set('status', params.status);
+      if (params?.vendorId) q.set('vendorId', params.vendorId);
+      if (params?.type) q.set('type', params.type);
+      return apiFetch<any[]>(`/contracts${q.toString() ? '?' + q : ''}`);
+    },
+    get: (id: string) => apiFetch<any>(`/contracts/${id}`),
+    create: (data: unknown) => apiFetch<any>('/contracts', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) => apiFetch<any>(`/contracts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    activate: (id: string) => apiFetch<any>(`/contracts/${id}/activate`, { method: 'POST' }),
+    terminate: (id: string, reason: string) => apiFetch<any>(`/contracts/${id}/terminate`, { method: 'POST', body: JSON.stringify({ reason }) }),
+    addLine: (id: string, data: unknown) => apiFetch<any>(`/contracts/${id}/lines`, { method: 'POST', body: JSON.stringify(data) }),
+    addAmendment: (id: string, data: unknown) => apiFetch<any>(`/contracts/${id}/amendments`, { method: 'POST', body: JSON.stringify(data) }),
+    expiring: (days?: number) => apiFetch<any[]>(`/contracts/expiring${days ? '?days=' + days : ''}`),
+  },
+  settings: {
+    getAll: () => apiFetch<Record<string, string>>('/settings'),
+    getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),
+    updateBranding: (data: unknown) => apiFetch<any>('/settings/branding', { method: 'PUT', body: JSON.stringify(data) }),
+    updateSmtp: (data: unknown) => apiFetch<any>('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
+  },
 };
