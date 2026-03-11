@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
+import { AuditService } from '../audit/audit.service';
 import type { Db } from '@betterspend/db';
 import { purchaseOrders, poLines, poVersions, blanketReleases, requisitions } from '@betterspend/db';
 import { z } from 'zod';
@@ -55,6 +56,7 @@ export class PurchaseOrdersService {
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
     private readonly webhookEvents: WebhookEventService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; vendorId?: string }) {
@@ -131,7 +133,9 @@ export class PurchaseOrdersService {
       return po.id;
     });
 
-    return this.findOne(createdId, organizationId);
+    const created = await this.findOne(createdId, organizationId);
+    this.audit.log(organizationId, null, 'purchase_order', createdId, 'created', { internalNumber: (created as any).internalNumber, totalAmount: (created as any).totalAmount }).catch(() => {});
+    return created;
   }
 
   async issue(id: string, organizationId: string, issuedBy: string) {
@@ -145,6 +149,7 @@ export class PurchaseOrdersService {
       .where(eq(purchaseOrders.id, id))
       .returning();
     this.webhookEvents.emit(organizationId, 'po.issued', { purchaseOrder: updated });
+    this.audit.log(organizationId, issuedBy ?? null, 'purchase_order', id, 'issued', { totalAmount: updated.totalAmount }).catch(() => {});
     return updated;
   }
 
@@ -223,6 +228,7 @@ export class PurchaseOrdersService {
       .where(eq(purchaseOrders.id, id))
       .returning();
     this.webhookEvents.emit(organizationId, 'po.cancelled', { purchaseOrderId: id });
+    this.audit.log(organizationId, null, 'purchase_order', id, 'cancelled').catch(() => {});
     return updated;
   }
 

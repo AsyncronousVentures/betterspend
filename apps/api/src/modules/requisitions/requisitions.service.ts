@@ -4,6 +4,7 @@ import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { ApprovalEngineService } from '../approvals/approval-engine.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
+import { AuditService } from '../audit/audit.service';
 import type { Db } from '@betterspend/db';
 import { requisitions, requisitionLines } from '@betterspend/db';
 import type { CreateRequisitionInput } from '@betterspend/shared';
@@ -15,6 +16,7 @@ export class RequisitionsService {
     private readonly sequenceService: SequenceService,
     private readonly approvalEngine: ApprovalEngineService,
     private readonly webhookEvents: WebhookEventService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; departmentId?: string }) {
@@ -82,7 +84,9 @@ export class RequisitionsService {
       return req.id;
     });
 
-    return this.findOne(createdId, organizationId);
+    const created = await this.findOne(createdId, organizationId);
+    this.audit.log(organizationId, requesterId, 'requisition', createdId, 'created', { number: (created as any).number, title: input.title }).catch(() => {});
+    return created;
   }
 
   async update(id: string, organizationId: string, input: Partial<CreateRequisitionInput>) {
@@ -150,6 +154,7 @@ export class RequisitionsService {
 
     const submitted = await this.findOne(id, organizationId);
     this.webhookEvents.emit(organizationId, 'requisition.submitted', { requisition: submitted });
+    this.audit.log(organizationId, actorId, 'requisition', id, 'submitted', { status: submitted.status }).catch(() => {});
     return submitted;
   }
 
@@ -163,6 +168,7 @@ export class RequisitionsService {
       .set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(requisitions.id, id))
       .returning();
+    this.audit.log(organizationId, null, 'requisition', id, 'cancelled').catch(() => {});
     return updated;
   }
 }

@@ -8,6 +8,7 @@ import { MatchingService } from './matching.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { GlExportService } from '../gl/gl-export.service';
 import { BudgetsService } from '../budgets/budgets.service';
+import { AuditService } from '../audit/audit.service';
 
 export interface CreateInvoiceInput {
   purchaseOrderId?: string;
@@ -35,6 +36,7 @@ export class InvoicesService {
     private readonly webhookEvents: WebhookEventService,
     private readonly glExport: GlExportService,
     private readonly budgets: BudgetsService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -111,6 +113,7 @@ export class InvoicesService {
     }
 
     const created = await this.findOne(invoiceId, organizationId);
+    this.audit.log(organizationId, null, 'invoice', invoiceId, 'created', { invoiceNumber: input.invoiceNumber, totalAmount: (created as any).totalAmount }).catch(() => {});
     if (input.purchaseOrderId) {
       const matchSt = (created as any).matchStatus;
       if (matchSt === 'exception') {
@@ -137,6 +140,7 @@ export class InvoicesService {
       .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)));
     const approved = await this.findOne(id, organizationId);
     this.webhookEvents.emit(organizationId, 'invoice.approved', { invoice: approved });
+    this.audit.log(organizationId, approverId, 'invoice', id, 'approved', { totalAmount: (approved as any).totalAmount }).catch(() => {});
     this.glExport.enqueue(organizationId, id, 'qbo');
 
     // Auto-track budget spend: resolve department via PO → Requisition
