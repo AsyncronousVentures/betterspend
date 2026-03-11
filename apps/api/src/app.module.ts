@@ -20,6 +20,10 @@ import { PunchoutModule } from './modules/punchout/punchout.module';
 import { HealthModule } from './modules/health/health.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -44,6 +48,10 @@ import { AuthModule } from './modules/auth/auth.module';
     OcrModule,
     PunchoutModule,
     AnalyticsModule,
+    DepartmentsModule,
+    ProjectsModule,
+    AuditModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

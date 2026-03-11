@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, Query, ParseUUIDPipe,
+  Controller, Get, Post, Patch, Param, Body, Query, ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BudgetsService, CreateBudgetInput } from './budgets.service';
@@ -10,7 +10,6 @@ import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
-  // NOTE: this route must appear before ':id' to avoid routing conflicts
   @Get('check')
   @ApiOperation({ summary: 'Check budget availability for a department' })
   @ApiQuery({ name: 'departmentId', required: true })
@@ -23,10 +22,7 @@ export class BudgetsController {
     @Query('fiscalYear') fiscalYear: string,
   ) {
     return this.budgetsService.checkBudget(
-      orgId,
-      departmentId,
-      parseFloat(amount),
-      parseInt(fiscalYear, 10),
+      orgId, departmentId, parseFloat(amount), parseInt(fiscalYear, 10),
     );
   }
 
@@ -46,5 +42,15 @@ export class BudgetsController {
   @ApiOperation({ summary: 'Create a budget with optional periods' })
   create(@Body() body: CreateBudgetInput, @CurrentOrgId() orgId: string) {
     return this.budgetsService.create(orgId, body);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a budget' })
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; totalAmount?: number; currency?: string },
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.budgetsService.update(id, orgId, body);
   }
 }
