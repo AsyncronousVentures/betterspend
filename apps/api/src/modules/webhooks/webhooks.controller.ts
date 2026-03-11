@@ -4,8 +4,10 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { WebhooksService, CreateWebhookEndpointInput, UpdateWebhookEndpointInput } from './webhooks.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('webhooks')
+@Roles('admin')
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}

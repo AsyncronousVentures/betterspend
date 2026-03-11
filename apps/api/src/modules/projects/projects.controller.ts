@@ -4,6 +4,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ProjectsService, CreateProjectInput, UpdateProjectInput } from './projects.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('projects')
 @Controller('projects')
@@ -23,12 +24,14 @@ export class ProjectsController {
   }
 
   @Post()
+  @Roles('admin')
   @ApiOperation({ summary: 'Create a project' })
   create(@Body() body: CreateProjectInput, @CurrentOrgId() orgId: string) {
     return this.projectsService.create(orgId, body);
   }
 
   @Patch(':id')
+  @Roles('admin')
   @ApiOperation({ summary: 'Update a project' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -39,6 +42,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
+  @Roles('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a project' })
   remove(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {

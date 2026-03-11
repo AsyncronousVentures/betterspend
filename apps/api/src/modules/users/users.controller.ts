@@ -4,8 +4,10 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('users')
+@Roles('admin')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

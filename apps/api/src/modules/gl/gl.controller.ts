@@ -5,8 +5,10 @@ import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { GlMappingsService, CreateGlMappingInput, UpdateGlMappingInput } from './gl-mappings.service';
 import { GlExportService } from './gl-export.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('gl')
+@Roles('finance', 'admin')
 @Controller('gl')
 export class GlController {
   constructor(

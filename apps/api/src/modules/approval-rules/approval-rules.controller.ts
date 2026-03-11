@@ -4,6 +4,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApprovalRulesService, CreateApprovalRuleInput, UpdateApprovalRuleInput } from './approval-rules.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('approval-rules')
 @Controller('approval-rules')
@@ -23,12 +24,14 @@ export class ApprovalRulesController {
   }
 
   @Post()
+  @Roles('admin')
   @ApiOperation({ summary: 'Create an approval rule with steps' })
   create(@Body() body: CreateApprovalRuleInput, @CurrentOrgId() orgId: string) {
     return this.approvalRulesService.create(orgId, body);
   }
 
   @Patch(':id')
+  @Roles('admin')
   @ApiOperation({ summary: 'Update approval rule metadata' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -39,6 +42,7 @@ export class ApprovalRulesController {
   }
 
   @Delete(':id')
+  @Roles('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Deactivate an approval rule' })
   remove(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
