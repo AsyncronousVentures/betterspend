@@ -43,4 +43,16 @@ export class AnalyticsController {
   poCycleTime(@CurrentOrgId() orgId: string) {
     return this.analyticsService.poCycleTime(orgId);
   }
+
+  @Get('pending-items')
+  @ApiOperation({ summary: 'Count of items requiring action (approvals, exceptions, etc.)' })
+  pendingItems(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.pendingItems(orgId);
+  }
+
+  @Get('recent-activity')
+  @ApiOperation({ summary: 'Recent audit log activity (last 20 events)' })
+  recentActivity(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.recentActivity(orgId);
+  }
 }

@@ -21,21 +21,54 @@ function KpiCard({ label, value, sub, href, color = '#3b82f6' }: { label: string
   return href ? <Link href={href} style={{ textDecoration: 'none' }}>{inner}</Link> : inner;
 }
 
+function ActionItem({ label, count, href, urgent }: { label: string; count: number; href: string; urgent?: boolean }) {
+  if (count === 0) return null;
+  return (
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer',
+      }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      >
+        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{label}</span>
+        <span style={{
+          background: urgent ? '#fee2e2' : '#fef3c7',
+          color: urgent ? '#991b1b' : '#92400e',
+          padding: '0.15rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700,
+        }}>{count}</span>
+      </div>
+    </Link>
+  );
+}
+
 export default function HomePage() {
   const [kpis, setKpis] = useState<any>(null);
+  const [pending, setPending] = useState<any>(null);
+  const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.analytics.kpis()
-      .then(setKpis)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.analytics.kpis(),
+      api.analytics.pendingItems(),
+      api.analytics.recentActivity(),
+    ]).then(([k, p, a]) => {
+      setKpis(k);
+      setPending(p);
+      setActivity(Array.isArray(a) ? a : []);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const po = kpis?.purchaseOrders;
   const inv = kpis?.invoices;
   const req = kpis?.requisitions;
   const bud = kpis?.budgets;
+
+  const totalActions = pending
+    ? (pending.pendingApprovals ?? 0) + (pending.invoiceExceptions ?? 0)
+    : 0;
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -48,7 +81,7 @@ export default function HomePage() {
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem', height: '100px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem', height: '100px' }} />
           ))}
         </div>
       ) : (
@@ -59,6 +92,60 @@ export default function HomePage() {
           <KpiCard label="Annual Budget" value={fmt(bud?.totalBudget)} sub="all active budgets combined" href="/budgets" color="#8b5cf6" />
         </div>
       )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.75rem' }}>
+        {/* Action items */}
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>Action Required</h2>
+            {totalActions > 0 && (
+              <span style={{ background: '#ef4444', color: '#fff', padding: '0.15rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700 }}>{totalActions}</span>
+            )}
+          </div>
+          {!pending || totalActions === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+              {loading ? 'Loading…' : 'All caught up!'}
+            </div>
+          ) : (
+            <div>
+              <ActionItem label="Pending Approvals" count={pending.pendingApprovals ?? 0} href="/approvals" />
+              <ActionItem label="Invoice Exceptions" count={pending.invoiceExceptions ?? 0} href="/invoices" urgent />
+              <ActionItem label="Requisitions Awaiting Approval" count={pending.requisitionsPendingApproval ?? 0} href="/requisitions" />
+              <ActionItem label="POs Awaiting First Receipt" count={pending.posAwaitingReceipt ?? 0} href="/receiving" />
+            </div>
+          )}
+        </div>
+
+        {/* Recent activity */}
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>Recent Activity</h2>
+          </div>
+          {loading ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>
+          ) : activity.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>No recent activity</div>
+          ) : (
+            <div style={{ overflowY: 'auto', maxHeight: '280px' }}>
+              {activity.slice(0, 12).map((item, i) => (
+                <div key={item.id ?? i} style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #f9fafb', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', marginTop: '0.4rem', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.8rem', color: '#374151' }}>
+                      <span style={{ fontWeight: 600 }}>{item.userName ?? 'System'}</span>{' '}
+                      <span style={{ color: '#6b7280' }}>{item.action}</span>{' '}
+                      <span style={{ color: '#9ca3af', textTransform: 'capitalize' }}>{String(item.entityType ?? '').replace(/_/g, ' ')}</span>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Quick actions */}
       <div style={{ marginBottom: '1.75rem' }}>
