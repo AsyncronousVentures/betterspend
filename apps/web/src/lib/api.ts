@@ -243,6 +243,10 @@ export const api = {
     addAmendment: (id: string, data: unknown) => apiFetch<any>(`/contracts/${id}/amendments`, { method: 'POST', body: JSON.stringify(data) }),
     expiring: (days?: number) => apiFetch<any[]>(`/contracts/expiring${days ? '?days=' + days : ''}`),
   },
+  passwordReset: {
+    request: (email: string) => apiFetch<{ success: boolean }>('/password-reset/request', { method: 'POST', body: JSON.stringify({ email }) }),
+    reset: (token: string, password: string) => apiFetch<{ success: boolean }>('/password-reset/reset', { method: 'POST', body: JSON.stringify({ token, password }) }),
+  },
   settings: {
     getAll: () => apiFetch<Record<string, string>>('/settings'),
     getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),

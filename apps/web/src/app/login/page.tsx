@@ -25,6 +25,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const passwordReset = searchParams.get('reset') === '1';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -90,6 +91,21 @@ function LoginForm() {
           </div>
         </div>
 
+        {passwordReset && (
+          <div style={{
+            background: COLORS.accentGreenLight,
+            border: '1px solid #bbf7d0',
+            borderRadius: '8px',
+            padding: '0.625rem 0.875rem',
+            color: COLORS.accentGreenDark,
+            fontSize: '0.8125rem',
+            marginBottom: '1rem',
+            textAlign: 'center',
+          }}>
+            Password reset successful. Please sign in with your new password.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.375rem' }}>
@@ -108,9 +124,14 @@ function LoginForm() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.375rem' }}>
-              Password
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.375rem' }}>
+              <label style={{ fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary }}>
+                Password
+              </label>
+              <Link href="/forgot-password" style={{ fontSize: '0.75rem', color: COLORS.accentBlue, textDecoration: 'none' }}>
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               value={password}
