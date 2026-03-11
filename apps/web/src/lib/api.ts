@@ -103,19 +103,57 @@ export const api = {
     list: () => apiFetch<any[]>('/requisitions'),
     get: (id: string) => apiFetch<any>(`/requisitions/${id}`),
     create: (data: unknown) => apiFetch<any>('/requisitions', { method: 'POST', body: JSON.stringify(data) }),
+    submit: (id: string) => apiFetch<any>(`/requisitions/${id}/submit`, { method: 'POST' }),
+    cancel: (id: string) => apiFetch<any>(`/requisitions/${id}/cancel`, { method: 'POST' }),
   },
   purchaseOrders: {
     list: () => apiFetch<any[]>('/purchase-orders'),
     get: (id: string) => apiFetch<any>(`/purchase-orders/${id}`),
+    create: (data: unknown) => apiFetch<any>('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
+    issue: (id: string) => apiFetch<any>(`/purchase-orders/${id}/issue`, { method: 'POST' }),
+    changeOrder: (id: string, data: unknown) => apiFetch<any>(`/purchase-orders/${id}/change-order`, { method: 'POST', body: JSON.stringify(data) }),
   },
   invoices: {
     list: () => apiFetch<any[]>('/invoices'),
     get: (id: string) => apiFetch<any>(`/invoices/${id}`),
+    create: (data: unknown) => apiFetch<any>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
+    approve: (id: string) => apiFetch<any>(`/invoices/${id}/approve`, { method: 'POST' }),
+    rerunMatch: (id: string) => apiFetch<any>(`/invoices/${id}/match`, { method: 'POST' }),
+  },
+  approvals: {
+    list: () => apiFetch<any[]>('/approvals'),
+    get: (id: string) => apiFetch<any>(`/approvals/${id}`),
+    approve: (id: string, data: unknown) => apiFetch<any>(`/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify(data) }),
+    reject: (id: string, data: unknown) => apiFetch<any>(`/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+  receiving: {
+    list: () => apiFetch<any[]>('/receiving'),
+    get: (id: string) => apiFetch<any>(`/receiving/${id}`),
+    create: (data: unknown) => apiFetch<any>('/receiving', { method: 'POST', body: JSON.stringify(data) }),
+    confirm: (id: string) => apiFetch<any>(`/receiving/${id}/confirm`, { method: 'POST' }),
   },
   budgets: {
     list: () => apiFetch<any[]>('/budgets'),
     get: (id: string) => apiFetch<any>(`/budgets/${id}`),
     create: (data: unknown) => apiFetch<any>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) => apiFetch<any>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  audit: {
+    list: (params?: { entityType?: string; entityId?: string; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.entityType) q.set('entityType', params.entityType);
+      if (params?.entityId) q.set('entityId', params.entityId);
+      if (params?.limit) q.set('limit', String(params.limit));
+      return apiFetch<any[]>(`/audit${q.toString() ? '?' + q : ''}`);
+    },
+  },
+  reports: {
+    download: (type: string, params?: Record<string, string>) => {
+      const q = new URLSearchParams(params ?? {});
+      const token = getCookie('bs_token');
+      const url = `${API_BASE}/api/v1/reports/${type}${q.toString() ? '?' + q : ''}`;
+      return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    },
   },
   analytics: {
     kpis: () => apiFetch<any>('/analytics/kpis'),

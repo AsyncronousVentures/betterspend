@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../lib/api';
 
 interface Vendor { id: string; name: string; }
 interface CatalogItem {
@@ -55,21 +54,18 @@ export default function CatalogPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filterCategory) params.set('category', filterCategory);
-    if (filterVendor) params.set('vendorId', filterVendor);
-    params.set('activeOnly', 'false');
-
-    const [itemsRes, vendorsRes, catsRes] = await Promise.all([
-      fetch(searchQ
-        ? `${API_URL}/catalog-items/search?q=${encodeURIComponent(searchQ)}`
-        : `${API_URL}/catalog-items?${params}`),
-      fetch(`${API_URL}/vendors`),
-      fetch(`${API_URL}/catalog-items/categories`),
-    ]);
-    if (itemsRes.ok) setItems(await itemsRes.json() as CatalogItem[]);
-    if (vendorsRes.ok) setVendors(await vendorsRes.json() as Vendor[]);
-    if (catsRes.ok) setCategories(await catsRes.json() as string[]);
+    try {
+      const [items, vendors, cats] = await Promise.all([
+        searchQ ? api.catalog.search(searchQ) : api.catalog.list({ vendorId: filterVendor || undefined, category: filterCategory || undefined }),
+        api.vendors.list(),
+        api.catalog.categories(),
+      ]);
+      setItems(items as CatalogItem[]);
+      setVendors(vendors as Vendor[]);
+      setCategories(cats);
+    } catch {
+      // silently fail
+    }
     setLoading(false);
   }, [filterCategory, filterVendor, searchQ]);
 
@@ -84,14 +80,12 @@ export default function CatalogPage() {
       unitPrice: parseFloat(form.unitPrice), currency: form.currency,
       vendorId: form.vendorId || undefined,
     };
-    const url = editId ? `${API_URL}/catalog-items/${editId}` : `${API_URL}/catalog-items`;
-    const method = editId ? 'PATCH' : 'POST';
-    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (res.ok) {
+    try {
+      if (editId) await api.catalog.update(editId, body);
+      else await api.catalog.create(body);
       setShowForm(false); setEditId(null); setForm(EMPTY_FORM); await load();
-    } else {
-      const err = await res.json() as { message?: string };
-      alert(err.message ?? 'Save failed');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Save failed');
     }
     setSaving(false);
   }
@@ -110,15 +104,12 @@ export default function CatalogPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this catalog item?')) return;
-    await fetch(`${API_URL}/catalog-items/${id}`, { method: 'DELETE' });
+    await api.catalog.remove(id).catch(() => {});
     await load();
   }
 
   async function toggleActive(item: CatalogItem) {
-    await fetch(`${API_URL}/catalog-items/${item.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !item.isActive }),
-    });
+    await api.catalog.update(item.id, { isActive: !item.isActive }).catch(() => {});
     await load();
   }
 
