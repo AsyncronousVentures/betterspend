@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 
@@ -125,14 +125,29 @@ function CatalogPicker({ onSelect, currentDescription }: {
   );
 }
 
-export default function NewRequisitionPage() {
+function NewRequisitionContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('normal');
   const [currency, setCurrency] = useState('USD');
   const [neededBy, setNeededBy] = useState('');
-  const [lines, setLines] = useState<LineItem[]>([{ ...EMPTY_LINE }]);
+
+  // Pre-populate from catalog item if passed via query params
+  const prefill = searchParams.get('catalogItemId')
+    ? {
+        catalogItemId: searchParams.get('catalogItemId') ?? '',
+        description: searchParams.get('description') ?? '',
+        unitPrice: searchParams.get('unitPrice') ?? '0',
+        uom: searchParams.get('uom') ?? 'each',
+        vendorId: searchParams.get('vendorId') ?? '',
+      }
+    : null;
+
+  const [lines, setLines] = useState<LineItem[]>([
+    prefill ? { ...EMPTY_LINE, ...prefill } : { ...EMPTY_LINE },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -293,5 +308,13 @@ export default function NewRequisitionPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewRequisitionPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', color: '#9ca3af' }}>Loading…</div>}>
+      <NewRequisitionContent />
+    </Suspense>
   );
 }

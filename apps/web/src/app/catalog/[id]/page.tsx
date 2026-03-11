@@ -107,6 +107,14 @@ export default function CatalogItemDetailPage({ params }: { params: Promise<{ id
           {item.sku && <div style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6b7280' }}>SKU: {item.sku}</div>}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {item.isActive && (
+            <Link
+              href={`/requisitions/new?catalogItemId=${item.id}&description=${encodeURIComponent(item.name)}&unitPrice=${encodeURIComponent(item.unitPrice ?? '0')}&uom=${encodeURIComponent(item.unitOfMeasure ?? 'each')}${item.vendor?.id ? `&vendorId=${item.vendor.id}` : ''}`}
+              style={{ padding: '0.4rem 0.875rem', borderRadius: '6px', background: '#111827', color: '#fff', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 500, display: 'inline-block' }}
+            >
+              + Create Requisition
+            </Link>
+          )}
           <button
             onClick={toggleActive}
             disabled={toggling}
