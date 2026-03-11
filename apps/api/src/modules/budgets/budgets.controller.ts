@@ -10,6 +10,28 @@ import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}
 
+  @Get('forecast/summary')
+  @ApiOperation({ summary: 'Org-level budget forecast summary' })
+  @ApiQuery({ name: 'fiscalYear', required: false, type: Number })
+  getForecastSummary(
+    @CurrentOrgId() orgId: string,
+    @Query('fiscalYear') fiscalYear?: string,
+  ) {
+    const year = fiscalYear ? parseInt(fiscalYear, 10) : new Date().getFullYear();
+    return this.budgetsService.getForecastSummary(orgId, year);
+  }
+
+  @Get('forecast')
+  @ApiOperation({ summary: 'Per-budget consumption forecast with linear regression' })
+  @ApiQuery({ name: 'fiscalYear', required: false, type: Number })
+  getForecast(
+    @CurrentOrgId() orgId: string,
+    @Query('fiscalYear') fiscalYear?: string,
+  ) {
+    const year = fiscalYear ? parseInt(fiscalYear, 10) : new Date().getFullYear();
+    return this.budgetsService.getForecast(orgId, year);
+  }
+
   @Get('check')
   @ApiOperation({ summary: 'Check budget availability for a department' })
   @ApiQuery({ name: 'departmentId', required: true })

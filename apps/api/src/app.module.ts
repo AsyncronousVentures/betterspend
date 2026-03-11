@@ -36,6 +36,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SupplierScorecardModule } from './modules/supplier-scorecard/supplier-scorecard.module';
 import { ApprovalDelegationsModule } from './modules/approval-delegations/approval-delegations.module';
 import { RfqModule } from './modules/rfq/rfq.module';
+import { RecurringPoModule } from './modules/recurring-po/recurring-po.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { RfqModule } from './modules/rfq/rfq.module';
     SupplierScorecardModule,
     ApprovalDelegationsModule,
     RfqModule,
+    RecurringPoModule,
   ],
 })
 export class AppModule {}

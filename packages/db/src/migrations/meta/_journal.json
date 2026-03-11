@@ -71,6 +71,20 @@
       "when": 1773600000000,
       "tag": "0009_rfq_sourcing",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773650000000,
+      "tag": "0010_vendor_diversity_esg",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773700000000,
+      "tag": "0010_recurring_pos",
+      "breakpoints": true
     }
   ]
 }

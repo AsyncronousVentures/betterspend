@@ -37,6 +37,7 @@ const NAV_CONFIG: NavEntry[] = [
       { label: 'Requisitions', href: '/requisitions' },
       { label: 'Purchase Orders', href: '/purchase-orders' },
       { label: 'RFQ / Sourcing', href: '/rfq' },
+      { label: 'Recurring POs', href: '/recurring-po' },
       { label: 'Catalog', href: '/catalog' },
     ],
   },
@@ -77,6 +78,7 @@ const NAV_CONFIG: NavEntry[] = [
     children: [
       { label: 'Vendors', href: '/vendors' },
       { label: 'Supplier Scorecard', href: '/supplier-scorecard' },
+      { label: 'Supplier Diversity & ESG', href: '/supplier-diversity' },
       { label: 'Contracts', href: '/contracts' },
       { label: 'Users', href: '/users' },
       { label: 'Departments', href: '/departments' },

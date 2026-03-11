@@ -55,4 +55,20 @@ export class VendorsController {
     const parsed = vendorSchema.partial().parse(body);
     return this.vendorsService.update(id, orgId, parsed);
   }
+
+  @Patch(':id/esg')
+  @ApiOperation({ summary: 'Update vendor ESG and diversity data' })
+  updateEsg(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.vendorsService.updateEsg(id, orgId, body as any);
+  }
+
+  @Get('diversity/summary')
+  @ApiOperation({ summary: 'Get supplier diversity and ESG summary for the organization' })
+  diversitySummary(@CurrentOrgId() orgId: string) {
+    return this.vendorsService.getDiversitySummary(orgId);
+  }
 }

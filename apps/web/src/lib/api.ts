@@ -47,6 +47,8 @@ export const api = {
     create: (data: unknown) => apiFetch<any>('/vendors', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: unknown) => apiFetch<any>(`/vendors/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     transactions: (id: string) => apiFetch<any>(`/vendors/${id}/transactions`),
+    updateEsg: (id: string, data: unknown) => apiFetch<any>(`/vendors/${id}/esg`, { method: 'PATCH', body: JSON.stringify(data) }),
+    diversitySummary: () => apiFetch<any>('/vendors/diversity/summary'),
   },
   users: {
     list: () => apiFetch<any[]>('/users'),
@@ -178,6 +180,10 @@ export const api = {
       apiFetch<any>(`/budgets/${id}/periods`, { method: 'POST', body: JSON.stringify(data) }),
     removePeriod: (id: string, periodId: string) =>
       apiFetch<any>(`/budgets/${id}/periods/${periodId}`, { method: 'DELETE' }),
+    forecast: (fiscalYear?: number) =>
+      apiFetch<any[]>('/budgets/forecast' + (fiscalYear ? `?fiscalYear=${fiscalYear}` : '')),
+    forecastSummary: (fiscalYear?: number) =>
+      apiFetch<any>('/budgets/forecast/summary' + (fiscalYear ? `?fiscalYear=${fiscalYear}` : '')),
   },
   audit: {
     list: (params?: { entityType?: string; entityId?: string; limit?: number }) => {
@@ -338,5 +344,13 @@ export const api = {
     close: (id: string) => apiFetch<any>(`/rfq/${id}/close`, { method: 'POST' }),
     award: (id: string, responseId: string) => apiFetch<any>(`/rfq/${id}/award`, { method: 'POST', body: JSON.stringify({ responseId }) }),
     submitResponse: (id: string, data: unknown) => apiFetch<any>(`/rfq/${id}/responses`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+  recurringPo: {
+    list: () => apiFetch<any[]>('/recurring-po'),
+    get: (id: string) => apiFetch<any>(`/recurring-po/${id}`),
+    create: (data: unknown) => apiFetch<any>('/recurring-po', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) => apiFetch<any>(`/recurring-po/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => apiFetch<void>(`/recurring-po/${id}`, { method: 'DELETE' }),
+    run: (id: string) => apiFetch<any>(`/recurring-po/${id}/run`, { method: 'POST' }),
   },
 };

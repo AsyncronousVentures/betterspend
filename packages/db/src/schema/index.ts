@@ -21,3 +21,4 @@ export * from './vendor-portal-tokens';
 export * from './notifications';
 export * from './approval-delegations';
 export * from './rfq';
+export * from './recurring-pos';

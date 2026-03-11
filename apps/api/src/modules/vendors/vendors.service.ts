@@ -41,7 +41,68 @@ export class VendorsService {
     return vendor;
   }
 
-  async getTransactions(id: string, organizationId: string) {
+  async updateEsg(id: string, organizationId: string, data: {
+    diversityCategories?: string[];
+    esgRating?: string;
+    carbonFootprintTons?: string;
+    sustainabilityCertifications?: string[];
+    esgNotes?: string;
+    diversityVerifiedAt?: string;
+  }) {
+    await this.findOne(id, organizationId);
+    const [vendor] = await this.db
+      .update(vendors)
+      .set({
+        ...(data.diversityCategories !== undefined && { diversityCategories: data.diversityCategories }),
+        ...(data.esgRating !== undefined && { esgRating: data.esgRating }),
+        ...(data.carbonFootprintTons !== undefined && { carbonFootprintTons: data.carbonFootprintTons }),
+        ...(data.sustainabilityCertifications !== undefined && { sustainabilityCertifications: data.sustainabilityCertifications }),
+        ...(data.esgNotes !== undefined && { esgNotes: data.esgNotes }),
+        ...(data.diversityVerifiedAt && { diversityVerifiedAt: new Date(data.diversityVerifiedAt) }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(vendors.id, id), eq(vendors.organizationId, organizationId)))
+      .returning();
+    return vendor;
+  }
+
+  async getDiversitySummary(organizationId: string) {
+    const allVendors = await this.db.query.vendors.findMany({
+      where: eq(vendors.organizationId, organizationId),
+    });
+
+    const diversityCategories: Record<string, number> = {};
+    const esgRatings: Record<string, number> = {};
+    let diverseCount = 0;
+    let ratedCount = 0;
+
+    for (const v of allVendors) {
+      const cats = (v.diversityCategories as string[]) ?? [];
+      if (cats.length > 0) diverseCount++;
+      for (const c of cats) {
+        diversityCategories[c] = (diversityCategories[c] ?? 0) + 1;
+      }
+      if (v.esgRating) {
+        ratedCount++;
+        esgRatings[v.esgRating] = (esgRatings[v.esgRating] ?? 0) + 1;
+      }
+    }
+
+    return {
+      totalVendors: allVendors.length,
+      diverseVendors: diverseCount,
+      diversityRate: allVendors.length ? Math.round((diverseCount / allVendors.length) * 100) : 0,
+      esgRatedVendors: ratedCount,
+      diversityBreakdown: diversityCategories,
+      esgRatingBreakdown: esgRatings,
+      topDiverseVendors: allVendors
+        .filter((v) => ((v.diversityCategories as string[]) ?? []).length > 0)
+        .slice(0, 10)
+        .map((v) => ({ id: v.id, name: v.name, categories: v.diversityCategories, esgRating: v.esgRating })),
+    };
+  }
+
+    async getTransactions(id: string, organizationId: string) {
     await this.findOne(id, organizationId);
 
     const [invoiceRows, poRows] = await Promise.all([

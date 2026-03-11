@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, jsonb, timestamp, text } from 'drizzle-orm/pg-core';
 import { organizations } from './organizations';
 
 export const vendors = pgTable('vendors', {
@@ -13,6 +13,13 @@ export const vendors = pgTable('vendors', {
   status: varchar('status', { length: 20 }).notNull().default('active'), // active|inactive|blocked
   punchoutEnabled: boolean('punchout_enabled').notNull().default(false),
   punchoutConfig: jsonb('punchout_config'),
+  // Supplier diversity & ESG fields
+  diversityCategories: jsonb('diversity_categories').default([]), // ['minority_owned', 'women_owned', 'veteran_owned', 'small_business', 'lgbtq_owned', 'disability_owned']
+  esgRating: varchar('esg_rating', { length: 10 }), // A+, A, B+, B, C, D (null = not rated)
+  carbonFootprintTons: varchar('carbon_footprint_tons', { length: 20 }), // annual CO2 tons (string/numeric)
+  sustainabilityCertifications: jsonb('sustainability_certifications').default([]), // ['iso14001', 'b_corp', 'fair_trade', 'fsc']
+  esgNotes: text('esg_notes'),
+  diversityVerifiedAt: timestamp('diversity_verified_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
