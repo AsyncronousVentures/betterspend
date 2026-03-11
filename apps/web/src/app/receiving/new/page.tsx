@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 interface PO {
   id: string;
@@ -78,24 +79,24 @@ function NewGRNForm() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: '#111827' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: COLORS.textPrimary }}>
         Create Goods Receipt (GRN)
       </h1>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Receipt Details</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: COLORS.textPrimary }}>Receipt Details</h2>
 
           <div style={{ display: 'grid', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                 Purchase Order *
               </label>
               <select
                 value={selectedPO?.id ?? ''}
                 onChange={(e) => handlePOChange(e.target.value)}
                 required
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem' }}
               >
                 <option value="">Select a PO...</option>
                 {pos.map((po) => (
@@ -105,14 +106,14 @@ function NewGRNForm() {
                 ))}
               </select>
               {pos.length === 0 && (
-                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                <p style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.25rem' }}>
                   No eligible POs. POs must be in approved/issued/partially_received status.
                 </p>
               )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                 Received Date *
               </label>
               <input
@@ -120,71 +121,73 @@ function NewGRNForm() {
                 value={receivedDate}
                 onChange={(e) => setReceivedDate(e.target.value)}
                 required
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                 Notes
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
               />
             </div>
           </div>
         </div>
 
         {selectedPO && (selectedPO.lines ?? []).length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Line Items</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                  {['#', 'Description', 'PO Qty', 'Received Qty', 'Rejected Qty'].map((h) => (
-                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(selectedPO.lines ?? []).map((line, idx) => (
-                  <tr key={line.id} style={{ borderBottom: idx < (selectedPO.lines?.length ?? 0) - 1 ? '1px solid #f3f4f6' : undefined }}>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#6b7280' }}>{line.lineNumber}</td>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>{line.description}</td>
-                    <td style={{ padding: '0.5rem 0.75rem', color: '#374151' }}>{line.quantity}</td>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        max={line.quantity}
-                        value={lineQtys[line.id]?.received ?? ''}
-                        onChange={(e) => setLineQtys((prev) => ({ ...prev, [line.id]: { ...prev[line.id], received: e.target.value } }))}
-                        style={{ width: '80px', padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.875rem' }}
-                      />
-                    </td>
-                    <td style={{ padding: '0.5rem 0.75rem' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={lineQtys[line.id]?.rejected ?? '0'}
-                        onChange={(e) => setLineQtys((prev) => ({ ...prev, [line.id]: { ...prev[line.id], rejected: e.target.value } }))}
-                        style={{ width: '80px', padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.875rem' }}
-                      />
-                    </td>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: COLORS.textPrimary }}>Line Items</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${COLORS.tableBorder}`, background: COLORS.tableHeaderBg }}>
+                    {['#', 'Description', 'PO Qty', 'Received Qty', 'Rejected Qty'].map((h) => (
+                      <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.8rem' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(selectedPO.lines ?? []).map((line, idx) => (
+                    <tr key={line.id} style={{ borderBottom: idx < (selectedPO.lines?.length ?? 0) - 1 ? `1px solid ${COLORS.hoverBg}` : undefined }}>
+                      <td style={{ padding: '0.5rem 0.75rem', color: COLORS.textSecondary }}>{line.lineNumber}</td>
+                      <td style={{ padding: '0.5rem 0.75rem' }}>{line.description}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: COLORS.textSecondary }}>{line.quantity}</td>
+                      <td style={{ padding: '0.5rem 0.75rem' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          max={line.quantity}
+                          value={lineQtys[line.id]?.received ?? ''}
+                          onChange={(e) => setLineQtys((prev) => ({ ...prev, [line.id]: { ...prev[line.id], received: e.target.value } }))}
+                          style={{ width: '80px', padding: '0.25rem 0.5rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '4px', fontSize: '0.875rem' }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={lineQtys[line.id]?.rejected ?? '0'}
+                          onChange={(e) => setLineQtys((prev) => ({ ...prev, [line.id]: { ...prev[line.id], rejected: e.target.value } }))}
+                          style={{ width: '80px', padding: '0.25rem 0.5rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '4px', fontSize: '0.875rem' }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {error && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#991b1b', fontSize: '0.875rem' }}>
+          <div style={{ background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1rem', color: COLORS.accentRedDark, fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
@@ -194,13 +197,13 @@ function NewGRNForm() {
             type="submit"
             disabled={loading || !selectedPO}
             style={{
-              background: loading ? '#9ca3af' : '#111827', color: '#fff', padding: '0.625rem 1.5rem',
+              background: loading ? COLORS.textMuted : COLORS.textPrimary, color: COLORS.white, padding: '0.625rem 1.5rem',
               borderRadius: '6px', border: 'none', fontSize: '0.875rem', fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
             {loading ? 'Creating...' : 'Create GRN'}
           </button>
-          <a href="/receiving" style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', color: '#374151', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+          <a href="/receiving" style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: `1px solid ${COLORS.inputBorder}`, fontSize: '0.875rem', color: COLORS.textSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
             Cancel
           </a>
         </div>
@@ -211,7 +214,7 @@ function NewGRNForm() {
 
 export default function NewGRNPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', color: '#6b7280' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', color: COLORS.textSecondary }}>Loading…</div>}>
       <NewGRNForm />
     </Suspense>
   );

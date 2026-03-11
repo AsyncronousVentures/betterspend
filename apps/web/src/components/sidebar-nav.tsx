@@ -2,46 +2,173 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { signOut } from '../lib/auth-client';
 import { api } from '../lib/api';
+import { COLORS } from '../lib/theme';
 
-type NavItem = { label: string; href: string; badge?: number };
+/* ── Types ── */
 
-const navItems: NavItem[] = [
+type NavChild = { label: string; href: string };
+
+type NavGroup = {
+  label: string;
+  children: NavChild[];
+  defaultOpen?: boolean;
+};
+
+type NavTopLevel = { label: string; href: string };
+
+type NavEntry = NavTopLevel | NavGroup;
+
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return 'children' in entry;
+}
+
+/* ── Navigation config ── */
+
+const NAV_CONFIG: NavEntry[] = [
   { label: 'Dashboard', href: '/' },
-  { label: 'Analytics', href: '/analytics' },
-  { label: 'Requisitions', href: '/requisitions' },
-  { label: 'Purchase Orders', href: '/purchase-orders' },
-  { label: 'Approvals', href: '/approvals' },
-  { label: 'Vendors', href: '/vendors' },
-  { label: 'Catalog', href: '/catalog' },
-  { label: 'Receiving', href: '/receiving' },
-  { label: 'Invoices', href: '/invoices' },
-  { label: 'OCR Jobs', href: '/ocr' },
-  { label: 'Budgets', href: '/budgets' },
-  { label: 'GL Integration', href: '/gl-mappings' },
-  { label: 'GL Export Jobs', href: '/gl-export-jobs' },
-  { label: 'Webhooks', href: '/webhooks' },
-  { label: 'Approval Rules', href: '/approval-rules' },
-  { label: 'Users', href: '/users' },
-  { label: 'Departments', href: '/departments' },
-  { label: 'Projects', href: '/projects' },
-  { label: 'Reports', href: '/reports' },
-  { label: 'Audit Log', href: '/audit' },
-  { label: 'Settings', href: '/settings' },
+  {
+    label: 'Procurement',
+    defaultOpen: true,
+    children: [
+      { label: 'Requisitions', href: '/requisitions' },
+      { label: 'Purchase Orders', href: '/purchase-orders' },
+      { label: 'Catalog', href: '/catalog' },
+    ],
+  },
+  {
+    label: 'Operations',
+    defaultOpen: true,
+    children: [
+      { label: 'Receiving', href: '/receiving' },
+      { label: 'Invoices', href: '/invoices' },
+      { label: 'OCR Jobs', href: '/ocr' },
+    ],
+  },
+  {
+    label: 'Approvals',
+    children: [
+      { label: 'Pending Approvals', href: '/approvals' },
+      { label: 'Approval Rules', href: '/approval-rules' },
+    ],
+  },
+  {
+    label: 'Finance',
+    children: [
+      { label: 'Budgets', href: '/budgets' },
+      { label: 'GL Integration', href: '/gl-mappings' },
+      { label: 'GL Export Jobs', href: '/gl-export-jobs' },
+    ],
+  },
+  {
+    label: 'Analytics & Reports',
+    children: [
+      { label: 'Analytics', href: '/analytics' },
+      { label: 'Reports', href: '/reports' },
+    ],
+  },
+  {
+    label: 'Organization',
+    children: [
+      { label: 'Vendors', href: '/vendors' },
+      { label: 'Users', href: '/users' },
+      { label: 'Departments', href: '/departments' },
+      { label: 'Projects', href: '/projects' },
+    ],
+  },
+  {
+    label: 'System',
+    children: [
+      { label: 'Webhooks', href: '/webhooks' },
+      { label: 'Audit Log', href: '/audit' },
+      { label: 'Settings', href: '/settings' },
+    ],
+  },
 ];
 
-export default function SidebarNav() {
+/* ── Chevron SVG ── */
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      style={{
+        transition: 'transform 0.2s ease',
+        transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+        flexShrink: 0,
+      }}
+    >
+      <path
+        d="M4.5 2.5L8 6L4.5 9.5"
+        stroke={COLORS.sidebarGroupLabel}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* ── Component ── */
+
+export default function SidebarNav({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Determine which groups should be open initially
+  const getInitialOpen = useCallback(() => {
+    const initial = new Set<string>();
+    for (const entry of NAV_CONFIG) {
+      if (!isGroup(entry)) continue;
+      if (entry.defaultOpen) initial.add(entry.label);
+      for (const child of entry.children) {
+        if (child.href === '/' ? pathname === '/' : pathname.startsWith(child.href)) {
+          initial.add(entry.label);
+        }
+      }
+    }
+    return initial;
+  }, [pathname]);
+
+  const [openGroups, setOpenGroups] = useState<Set<string>>(getInitialOpen);
+
+  // Auto-open group for active route on navigation
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      for (const entry of NAV_CONFIG) {
+        if (!isGroup(entry)) continue;
+        for (const child of entry.children) {
+          if (child.href === '/' ? pathname === '/' : pathname.startsWith(child.href)) {
+            next.add(entry.label);
+          }
+        }
+      }
+      return next;
+    });
+  }, [pathname]);
+
+  // Fetch pending count
   useEffect(() => {
     api.analytics.pendingItems()
       .then((data: any) => setPendingCount((data?.pendingApprovals ?? 0) + (data?.invoiceExceptions ?? 0)))
       .catch(() => {});
-  }, [pathname]); // refresh on navigation
+  }, [pathname]);
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -53,82 +180,190 @@ export default function SidebarNav() {
     return pathname.startsWith(href);
   }
 
-  const items: NavItem[] = navItems.map((item) => {
-    if (item.href === '/approvals' && pendingCount > 0) return { ...item, badge: pendingCount };
-    return item;
-  });
+  function handleLinkClick() {
+    onClose?.();
+  }
+
+  function getBadge(href: string): number | undefined {
+    if (href === '/approvals' && pendingCount > 0) return pendingCount;
+    return undefined;
+  }
+
+  /* ── Render helpers ── */
+
+  function renderLink(item: NavChild, indented: boolean) {
+    const active = isActive(item.href);
+    const badge = getBadge(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={handleLinkClick}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: indented ? '0.5rem 1rem 0.5rem 2.5rem' : '0.5rem 1rem 0.5rem 1.25rem',
+          color: active ? COLORS.sidebarTextActive : COLORS.sidebarText,
+          textDecoration: 'none',
+          fontSize: '0.8125rem',
+          fontWeight: active ? 500 : 400,
+          background: active ? COLORS.sidebarHover : 'transparent',
+          borderLeft: active ? `2px solid ${COLORS.sidebarAccent}` : '2px solid transparent',
+          transition: 'background 0.15s, color 0.15s',
+          lineHeight: '1.4',
+        }}
+        onMouseEnter={(e) => {
+          if (!active) {
+            (e.currentTarget as HTMLAnchorElement).style.background = COLORS.sidebarHover;
+            (e.currentTarget as HTMLAnchorElement).style.color = COLORS.sidebarTextActive;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!active) {
+            (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+            (e.currentTarget as HTMLAnchorElement).style.color = COLORS.sidebarText;
+          }
+        }}
+      >
+        <span>{item.label}</span>
+        {badge != null && badge > 0 && (
+          <span style={{
+            background: COLORS.badgeRed,
+            color: '#fff',
+            borderRadius: '9999px',
+            fontSize: '0.625rem',
+            fontWeight: 600,
+            minWidth: '18px',
+            height: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 5px',
+            flexShrink: 0,
+          }}>
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  function renderGroup(group: NavGroup) {
+    const open = openGroups.has(group.label);
+    const hasActiveChild = group.children.some((c) => isActive(c.href));
+    const groupBadge = group.children.reduce((sum, c) => sum + (getBadge(c.href) ?? 0), 0);
+
+    return (
+      <div key={group.label} style={{ marginBottom: '0.125rem' }}>
+        <button
+          onClick={() => toggleGroup(group.label)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            padding: '0.625rem 1rem 0.625rem 1.25rem',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            color: hasActiveChild ? COLORS.sidebarTextActive : COLORS.sidebarGroupLabel,
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase' as const,
+            textAlign: 'left' as const,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = COLORS.sidebarTextActive;
+          }}
+          onMouseLeave={(e) => {
+            if (!hasActiveChild) {
+              (e.currentTarget as HTMLButtonElement).style.color = COLORS.sidebarGroupLabel;
+            }
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {group.label}
+            {!open && groupBadge > 0 && (
+              <span style={{
+                background: COLORS.badgeRed,
+                color: '#fff',
+                borderRadius: '9999px',
+                fontSize: '0.5625rem',
+                fontWeight: 600,
+                minWidth: '16px',
+                height: '16px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+              }}>
+                {groupBadge > 99 ? '99+' : groupBadge}
+              </span>
+            )}
+          </span>
+          <Chevron open={open} />
+        </button>
+        {open && (
+          <div>
+            {group.children.map((child) => renderLink(child, true))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Main render ── */
 
   return (
     <>
-    <nav style={{ flex: 1, padding: '0.75rem 0', overflowY: 'auto' }}>
-      {items.map((item) => {
-        const active = isActive(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0.625rem 1.5rem',
-              color: active ? '#fff' : '#d1d5db',
-              textDecoration: 'none',
-              fontSize: '0.9rem',
-              fontWeight: active ? 600 : 400,
-              background: active ? '#1f2937' : 'transparent',
-              borderLeft: active ? '3px solid #3b82f6' : '3px solid transparent',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              if (!active) {
-                (e.currentTarget as HTMLAnchorElement).style.background = '#1f2937';
-                (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!active) {
-                (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                (e.currentTarget as HTMLAnchorElement).style.color = '#d1d5db';
-              }
-            }}
-          >
-            <span>{item.label}</span>
-            {item.badge != null && item.badge > 0 && (
-              <span style={{
-                background: '#ef4444', color: '#fff',
-                borderRadius: '9999px', fontSize: '0.65rem', fontWeight: 700,
-                minWidth: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '0 4px', flexShrink: 0,
-              }}>
-                {item.badge > 99 ? '99+' : item.badge}
-              </span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+      <nav style={{ flex: 1, paddingTop: '0.5rem', overflowY: 'auto' }}>
+        {NAV_CONFIG.map((entry) =>
+          isGroup(entry) ? renderGroup(entry) : renderLink(entry, false)
+        )}
+      </nav>
 
-    {/* Sign out */}
-    <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #1f2937' }}>
-      <button
-        onClick={handleSignOut}
-        style={{
-          width: '100%', background: 'transparent', border: 'none',
-          color: '#9ca3af', fontSize: '0.875rem', textAlign: 'left',
-          padding: '0.5rem 0.5rem', cursor: 'pointer', borderRadius: '6px',
-          transition: 'color 0.15s, background 0.15s',
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = '#fff';
-          (e.currentTarget as HTMLButtonElement).style.background = '#1f2937';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af';
-          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-        }}
-      >
-        Sign out
-      </button>
-    </div>
+      {/* Sign out */}
+      <div style={{ padding: '0.5rem 1rem', borderTop: `1px solid ${COLORS.sidebarBorder}` }}>
+        <button
+          onClick={handleSignOut}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.sidebarText,
+            fontSize: '0.8125rem',
+            textAlign: 'left',
+            padding: '0.5rem 0.25rem',
+            cursor: 'pointer',
+            borderRadius: '4px',
+            transition: 'color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = COLORS.sidebarTextActive;
+            (e.currentTarget as HTMLButtonElement).style.background = COLORS.sidebarHover;
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = COLORS.sidebarText;
+            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+          }}
+        >
+          Sign out
+        </button>
+      </div>
+
+      {/* Credit */}
+      <div style={{
+        padding: '0.625rem 1.25rem',
+        borderTop: `1px solid ${COLORS.sidebarBorder}`,
+        fontSize: '0.6875rem',
+        color: COLORS.sidebarGroupLabel,
+        lineHeight: 1.5,
+      }}>
+        <div style={{ opacity: 0.8 }}>&copy; Asynchronous Ventures LLC</div>
+      </div>
     </>
   );
 }

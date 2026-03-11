@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  const bg = toast.type === 'success' ? '#059669' : toast.type === 'error' ? '#dc2626' : '#1d4ed8';
+  const bg = toast.type === 'success' ? '#059669' : toast.type === 'error' ? '#dc2626' : '#2563eb';
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

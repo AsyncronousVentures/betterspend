@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 export default function NewVendorPage() {
   const router = useRouter();
@@ -51,18 +52,18 @@ export default function NewVendorPage() {
     }
   }
 
-  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
-  const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' };
+  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
+  const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/vendors" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '0.875rem' }}>← Vendors</Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginTop: '0.5rem' }}>New Vendor</h1>
+        <Link href="/vendors" style={{ color: COLORS.accentBlue, textDecoration: 'none', fontSize: '0.875rem' }}>← Vendors</Link>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary, marginTop: '0.5rem' }}>New Vendor</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
           <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Basic Info</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={{ gridColumn: '1 / -1' }}>
@@ -96,7 +97,7 @@ export default function NewVendorPage() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
           <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Contact</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
@@ -114,7 +115,7 @@ export default function NewVendorPage() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
           <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Address</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={{ gridColumn: '1 / -1' }}>
@@ -140,13 +141,13 @@ export default function NewVendorPage() {
           </div>
         </div>
 
-        {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', color: '#dc2626', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
+        {error && <div style={{ background: COLORS.accentRedLight, border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', color: COLORS.accentRedDark, fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="submit" disabled={saving} style={{ padding: '0.625rem 1.25rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+          <button type="submit" disabled={saving} style={{ padding: '0.625rem 1.25rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
             {saving ? 'Creating...' : 'Create Vendor'}
           </button>
-          <Link href="/vendors" style={{ padding: '0.625rem 1.25rem', background: '#e5e7eb', color: '#374151', borderRadius: '6px', textDecoration: 'none', fontWeight: 500 }}>Cancel</Link>
+          <Link href="/vendors" style={{ padding: '0.625rem 1.25rem', background: COLORS.tableBorder, color: COLORS.textSecondary, borderRadius: '6px', textDecoration: 'none', fontWeight: 500 }}>Cancel</Link>
         </div>
       </form>
     </div>

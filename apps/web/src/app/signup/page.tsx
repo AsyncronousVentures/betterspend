@@ -4,6 +4,29 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '../../lib/auth-client';
+import { COLORS, SHADOWS } from '../../lib/theme';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.625rem 0.875rem',
+  border: `1px solid ${COLORS.inputBorder}`,
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
+  color: COLORS.textPrimary,
+};
+
+function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = COLORS.inputBorderFocus;
+  e.target.style.boxShadow = SHADOWS.focusRing;
+}
+
+function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.target.style.borderColor = COLORS.inputBorder;
+  e.target.style.boxShadow = 'none';
+}
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -43,27 +66,34 @@ export default function SignUpPage() {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '0.625rem 0.875rem',
-    border: '1px solid #d1d5db', borderRadius: '8px',
-    fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-    transition: 'border-color 0.15s',
-  };
-
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#f9fafb',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: COLORS.contentBg,
+      padding: '1rem',
     }}>
       <div style={{
-        background: '#fff', borderRadius: '12px', padding: '2.5rem',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)', width: '100%', maxWidth: '400px',
+        background: COLORS.white,
+        borderRadius: '12px',
+        padding: '2.5rem',
+        boxShadow: SHADOWS.auth,
+        width: '100%',
+        maxWidth: '400px',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontWeight: 700, fontSize: '1.5rem', color: '#111827', letterSpacing: '-0.02em' }}>
+          <div style={{
+            fontWeight: 700,
+            fontSize: '1.625rem',
+            color: COLORS.textPrimary,
+            letterSpacing: '-0.03em',
+          }}>
             BetterSpend
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.375rem' }}>
+          <div style={{ color: COLORS.textMuted, fontSize: '0.8125rem', marginTop: '0.375rem' }}>
             Create your account
           </div>
         </div>
@@ -76,7 +106,7 @@ export default function SignUpPage() {
             { label: 'Confirm password', type: 'password', value: confirm, setter: setConfirm, placeholder: '••••••••' },
           ].map(({ label, type, value, setter, placeholder }) => (
             <div key={label}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.375rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.375rem' }}>
                 {label}
               </label>
               <input
@@ -86,16 +116,20 @@ export default function SignUpPage() {
                 required
                 placeholder={placeholder}
                 style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-                onBlur={(e) => (e.target.style.borderColor = '#d1d5db')}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
               />
             </div>
           ))}
 
           {error && (
             <div style={{
-              background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-              padding: '0.625rem 0.875rem', color: '#dc2626', fontSize: '0.875rem',
+              background: COLORS.accentRedLight,
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '0.625rem 0.875rem',
+              color: '#dc2626',
+              fontSize: '0.8125rem',
             }}>
               {error}
             </div>
@@ -105,23 +139,40 @@ export default function SignUpPage() {
             type="submit"
             disabled={loading}
             style={{
-              background: loading ? '#93c5fd' : '#3b82f6',
-              color: '#fff', border: 'none', borderRadius: '8px',
-              padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600,
+              background: loading ? '#93c5fd' : COLORS.accentBlue,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.6875rem',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.15s', marginTop: '0.5rem',
+              transition: 'background 0.15s',
+              marginTop: '0.375rem',
             }}
+            onMouseEnter={(e) => { if (!loading) (e.currentTarget.style.background = COLORS.accentBlueDark); }}
+            onMouseLeave={(e) => { if (!loading) (e.currentTarget.style.background = COLORS.accentBlue); }}
           >
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', marginTop: '1.5rem' }}>
+        <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: COLORS.textMuted, marginTop: '1.5rem' }}>
           Already have an account?{' '}
-          <Link href="/login" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
+          <Link href="/login" style={{ color: COLORS.accentBlue, textDecoration: 'none', fontWeight: 500 }}>
             Sign in
           </Link>
         </p>
+      </div>
+
+      {/* Credit */}
+      <div style={{
+        marginTop: '1.5rem',
+        fontSize: '0.6875rem',
+        color: COLORS.textMuted,
+        textAlign: 'center',
+      }}>
+        Open Source Procure-to-Pay by Asynchronous Ventures LLC
       </div>
     </div>
   );

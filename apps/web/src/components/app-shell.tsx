@@ -4,6 +4,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import SidebarNav from './sidebar-nav';
 import { api } from '../lib/api';
+import { COLORS, SHADOWS } from '../lib/theme';
+import { useIsMobile } from '../lib/use-media-query';
 
 const AUTH_PATHS = ['/login', '/signup', '/punchout'];
 
@@ -15,15 +17,37 @@ const TYPE_LABELS: Record<string, string> = {
   catalog_item: 'Catalog',
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  requisition: '#dbeafe',
-  purchase_order: '#d1fae5',
-  invoice: '#fef9c3',
-  vendor: '#ede9fe',
-  catalog_item: '#f0f9ff',
+const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  requisition: { bg: COLORS.accentBlueLight, text: COLORS.accentBlueDark },
+  purchase_order: { bg: COLORS.accentGreenLight, text: COLORS.accentGreenDark },
+  invoice: { bg: COLORS.accentAmberLight, text: COLORS.accentAmberDark },
+  vendor: { bg: COLORS.accentPurpleLight, text: COLORS.accentPurpleDark },
+  catalog_item: { bg: '#f0f9ff', text: '#0369a1' },
 };
 
-function GlobalSearch() {
+/* ── Hamburger Icon ── */
+
+function HamburgerIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M3 5h14M3 10h14M3 15h14" stroke={COLORS.textSecondary} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ── Close Icon ── */
+
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M5 5l10 10M15 5L5 15" stroke={COLORS.sidebarText} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/* ── Global Search ── */
+
+function GlobalSearch({ isMobile }: { isMobile: boolean }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -77,102 +101,248 @@ function GlobalSearch() {
   }
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '320px' }}>
+    <div ref={containerRef} style={{ position: 'relative', width: isMobile ? '100%' : '360px' }}>
       <input
         ref={inputRef}
         value={query}
         onChange={(e) => { setQuery(e.target.value); if (e.target.value.length >= 2) setOpen(true); }}
         onFocus={() => { if (results.length > 0) setOpen(true); }}
         onKeyDown={handleKeyDown}
-        placeholder="Search requisitions, POs, invoices…"
+        placeholder="Search requisitions, POs, invoices..."
         style={{
-          width: '100%', padding: '0.4rem 0.75rem', border: '1px solid #374151',
-          borderRadius: '6px', fontSize: '0.875rem', background: '#1f2937',
-          color: '#f9fafb', outline: 'none', boxSizing: 'border-box',
+          width: '100%',
+          padding: '0.5rem 0.75rem',
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '8px',
+          fontSize: '0.8125rem',
+          background: COLORS.contentBg,
+          color: COLORS.textPrimary,
+          outline: 'none',
+          boxSizing: 'border-box',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+        onFocusCapture={(e) => {
+          (e.currentTarget as HTMLInputElement).style.borderColor = COLORS.accentBlue;
+          (e.currentTarget as HTMLInputElement).style.boxShadow = SHADOWS.focusRing;
+        }}
+        onBlurCapture={(e) => {
+          (e.currentTarget as HTMLInputElement).style.borderColor = COLORS.border;
+          (e.currentTarget as HTMLInputElement).style.boxShadow = 'none';
         }}
       />
       {loading && (
-        <div style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: '#6b7280', fontSize: '0.75rem' }}>…</div>
+        <div style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: COLORS.textMuted, fontSize: '0.75rem' }}>...</div>
       )}
       {open && results.length > 0 && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.12)', zIndex: 100, overflow: 'hidden',
+          position: 'absolute',
+          top: 'calc(100% + 6px)',
+          left: 0,
+          right: 0,
+          background: COLORS.white,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: '10px',
+          boxShadow: SHADOWS.dropdown,
+          zIndex: 100,
+          overflow: 'hidden',
         }}>
-          {results.map((r) => (
-            <button
-              key={`${r._type}-${r.id}`}
-              onClick={() => navigate(r._href)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.625rem', width: '100%',
-                padding: '0.625rem 0.875rem', background: 'none', border: 'none',
-                cursor: 'pointer', textAlign: 'left', borderBottom: '1px solid #f3f4f6',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-            >
-              <span style={{
-                background: TYPE_COLORS[r._type] ?? '#f3f4f6',
-                padding: '0.1rem 0.4rem', borderRadius: '3px',
-                fontSize: '0.7rem', fontWeight: 700, color: '#374151',
-                minWidth: '38px', textAlign: 'center',
-              }}>
-                {TYPE_LABELS[r._type] ?? r._type}
-              </span>
-              <span style={{ fontSize: '0.875rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {r._label}
-              </span>
-              {r.status && (
-                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#9ca3af', flexShrink: 0 }}>{r.status}</span>
-              )}
-            </button>
-          ))}
+          {results.map((r) => {
+            const tc = TYPE_COLORS[r._type] ?? { bg: COLORS.contentBg, text: COLORS.textSecondary };
+            return (
+              <button
+                key={`${r._type}-${r.id}`}
+                onClick={() => navigate(r._href)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem',
+                  width: '100%',
+                  padding: '0.625rem 0.875rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  borderBottom: `1px solid ${COLORS.contentBg}`,
+                  transition: 'background 0.1s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.hoverBg)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+              >
+                <span style={{
+                  background: tc.bg,
+                  color: tc.text,
+                  padding: '0.125rem 0.4rem',
+                  borderRadius: '4px',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  minWidth: '40px',
+                  textAlign: 'center',
+                }}>
+                  {TYPE_LABELS[r._type] ?? r._type}
+                </span>
+                <span style={{
+                  fontSize: '0.8125rem',
+                  color: COLORS.textPrimary,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {r._label}
+                </span>
+                {r.status && (
+                  <span style={{ marginLeft: 'auto', fontSize: '0.6875rem', color: COLORS.textMuted, flexShrink: 0 }}>{r.status}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
 
+/* ── AppShell ── */
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const isAuthPage = AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
+  // Close sidebar on navigation (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   if (isAuthPage) {
     return <>{children}</>;
   }
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside
+  const SIDEBAR_WIDTH = isMobile ? 280 : 240;
+
+  const sidebar = (
+    <aside
+      style={{
+        width: `${SIDEBAR_WIDTH}px`,
+        flexShrink: 0,
+        background: COLORS.sidebarBg,
+        color: COLORS.sidebarTextActive,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        ...(isMobile ? {
+          position: 'fixed' as const,
+          top: 0,
+          left: 0,
+          zIndex: 60,
+        } : {
+          position: 'sticky' as const,
+          top: 0,
+        }),
+      }}
+    >
+      {/* Sidebar header */}
+      <div
         style={{
-          width: '220px',
-          flexShrink: 0,
-          background: '#111827',
-          color: '#f9fafb',
+          padding: '1rem 1.25rem',
+          borderBottom: `1px solid ${COLORS.sidebarBorder}`,
           display: 'flex',
-          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
         }}
       >
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderBottom: '1px solid #1f2937',
-            fontWeight: 700,
-            fontSize: '1.1rem',
-            color: '#fff',
-            letterSpacing: '-0.01em',
-          }}
-        >
+        <span style={{
+          fontWeight: 700,
+          fontSize: '1.0625rem',
+          color: COLORS.sidebarTextActive,
+          letterSpacing: '-0.02em',
+        }}>
           BetterSpend
-        </div>
-        <SidebarNav />
-      </aside>
+        </span>
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-label="Close sidebar"
+          >
+            <CloseIcon />
+          </button>
+        )}
+      </div>
+      <SidebarNav onClose={() => setSidebarOpen(false)} />
+    </aside>
+  );
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: COLORS.contentBg }}>
+      {/* Desktop sidebar */}
+      {!isMobile && sidebar}
+
+      {/* Mobile overlay */}
+      {isMobile && sidebarOpen && (
+        <>
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: SHADOWS.overlay,
+              zIndex: 50,
+            }}
+          />
+          {sidebar}
+        </>
+      )}
+
+      {/* Main content column */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        {/* Top bar with search */}
-        <div style={{ background: '#1f2937', padding: '0.625rem 1.5rem', display: 'flex', alignItems: 'center', borderBottom: '1px solid #374151', flexShrink: 0 }}>
-          <GlobalSearch />
+        {/* Top bar */}
+        <div style={{
+          background: COLORS.topbarBg,
+          padding: isMobile ? '0.625rem 1rem' : '0.625rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          borderBottom: `1px solid ${COLORS.topbarBorder}`,
+          flexShrink: 0,
+          position: 'sticky' as const,
+          top: 0,
+          zIndex: 40,
+        }}>
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '0.375rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.hoverBg)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+              aria-label="Open sidebar"
+            >
+              <HamburgerIcon />
+            </button>
+          )}
+          <GlobalSearch isMobile={isMobile} />
         </div>
+
+        {/* Page content */}
         <main style={{ flex: 1, overflowX: 'auto' }}>
           {children}
         </main>

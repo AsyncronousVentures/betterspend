@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 interface CatalogItem {
   id: string;
@@ -27,12 +28,12 @@ interface LineItem {
 const EMPTY_LINE: LineItem = { description: '', qty: '1', uom: 'each', unitPrice: '0', vendorId: '', catalogItemId: '' };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db',
+  width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`,
   borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box', outline: 'none',
-  background: '#fff', color: '#111827',
+  background: COLORS.white, color: COLORS.textPrimary,
 };
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem',
+  display: 'block', fontSize: '0.8rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.375rem',
 };
 
 function formatCurrency(amount: number) {
@@ -92,30 +93,30 @@ function CatalogPicker({ onSelect, currentDescription }: {
         style={inputStyle}
       />
       {loading && (
-        <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: '#9ca3af' }}>…</span>
+        <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: COLORS.textMuted }}>…</span>
       )}
       {open && results.length > 0 && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-          background: '#fff', border: '1px solid #d1d5db', borderRadius: '6px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: '240px', overflowY: 'auto', marginTop: '2px',
+          background: COLORS.white, border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px',
+          boxShadow: SHADOWS.dropdown, maxHeight: '240px', overflowY: 'auto', marginTop: '2px',
         }}>
           {results.map((item) => (
             <button
               key={item.id}
               type="button"
               onMouseDown={() => pick(item)}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.625rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#f9fafb'; }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.625rem 0.875rem', background: 'none', border: 'none', cursor: 'pointer', borderBottom: `1px solid ${COLORS.hoverBg}` }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = COLORS.hoverBg; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; }}
             >
-              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827' }}>{item.name}</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: COLORS.textPrimary }}>{item.name}</div>
+              <div style={{ fontSize: '0.75rem', color: COLORS.textSecondary, marginTop: '2px' }}>
                 {item.sku && <span style={{ marginRight: '0.5rem' }}>SKU: {item.sku}</span>}
-                <span style={{ color: '#2563eb', fontWeight: 500 }}>
+                <span style={{ color: COLORS.accentBlueDark, fontWeight: 500 }}>
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currency }).format(parseFloat(item.unitPrice))} / {item.unitOfMeasure}
                 </span>
-                {item.vendor && <span style={{ marginLeft: '0.5rem', color: '#9ca3af' }}>· {item.vendor.name}</span>}
+                {item.vendor && <span style={{ marginLeft: '0.5rem', color: COLORS.textMuted }}>· {item.vendor.name}</span>}
               </div>
             </button>
           ))}
@@ -200,18 +201,18 @@ function NewRequisitionContent() {
   return (
     <div style={{ padding: '2rem', maxWidth: '960px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/requisitions" style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}>
+        <Link href="/requisitions" style={{ color: COLORS.textSecondary, fontSize: '0.875rem', textDecoration: 'none' }}>
           &larr; Back to Requisitions
         </Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: '#111827' }}>New Requisition</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: COLORS.textPrimary }}>New Requisition</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: '#111827' }}>Details</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem', boxShadow: SHADOWS.card }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: COLORS.textPrimary }}>Details</h2>
           <div style={{ display: 'grid', gap: '1rem' }}>
             <div>
-              <label style={labelStyle}>Title <span style={{ color: '#ef4444' }}>*</span></label>
+              <label style={labelStyle}>Title <span style={{ color: COLORS.accentRed }}>*</span></label>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Office supplies Q1" style={inputStyle} required />
             </div>
             <div>
@@ -240,22 +241,22 @@ function NewRequisitionContent() {
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem' }}>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem', boxShadow: SHADOWS.card }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>Line Items</h2>
-              <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: '#9ca3af' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: COLORS.textPrimary }}>Line Items</h2>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: COLORS.textMuted }}>
                 Start typing to search the catalog — selecting an item auto-fills price, UOM &amp; vendor
               </p>
             </div>
-            <button type="button" onClick={addLine} style={{ background: 'transparent', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.375rem 0.875rem', fontSize: '0.8rem', cursor: 'pointer', color: '#374151', fontWeight: 500 }}>
+            <button type="button" onClick={addLine} style={{ background: 'transparent', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', padding: '0.375rem 0.875rem', fontSize: '0.8rem', cursor: 'pointer', color: COLORS.textSecondary, fontWeight: 500 }}>
               + Add Line
             </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '3fr 80px 80px 120px 100px 40px', gap: '0.5rem', marginBottom: '0.5rem' }}>
             {['Description / Catalog', 'Qty', 'UOM', 'Unit Price', 'Total', ''].map((h) => (
-              <div key={h} style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</div>
+              <div key={h} style={{ fontSize: '0.75rem', fontWeight: 600, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</div>
             ))}
           </div>
 
@@ -273,36 +274,36 @@ function NewRequisitionContent() {
                   onChange={(e) => updateLine(idx, 'uom', e.target.value)} placeholder="each" style={inputStyle} />
                 <input type="number" value={line.unitPrice} min="0" step="any"
                   onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)} style={inputStyle} />
-                <div style={{ fontSize: '0.875rem', color: '#374151', fontVariantNumeric: 'tabular-nums', textAlign: 'right', paddingRight: '0.25rem', paddingTop: '0.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: COLORS.textSecondary, fontVariantNumeric: 'tabular-nums', textAlign: 'right', paddingRight: '0.25rem', paddingTop: '0.5rem' }}>
                   {formatCurrency(lineTotal)}
                 </div>
                 <button type="button" onClick={() => removeLine(idx)} disabled={lines.length === 1}
-                  style={{ background: 'transparent', border: 'none', cursor: lines.length === 1 ? 'not-allowed' : 'pointer', color: lines.length === 1 ? '#d1d5db' : '#ef4444', fontSize: '1rem', padding: '0.25rem', marginTop: '0.375rem' }}>
+                  style={{ background: 'transparent', border: 'none', cursor: lines.length === 1 ? 'not-allowed' : 'pointer', color: lines.length === 1 ? COLORS.inputBorder : COLORS.accentRed, fontSize: '1rem', padding: '0.25rem', marginTop: '0.375rem' }}>
                   &times;
                 </button>
               </div>
             );
           })}
 
-          <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>Total</span>
-            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums', minWidth: '120px', textAlign: 'right' }}>
+          <div style={{ borderTop: `1px solid ${COLORS.tableBorder}`, marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: COLORS.textSecondary }}>Total</span>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: COLORS.textPrimary, fontVariantNumeric: 'tabular-nums', minWidth: '120px', textAlign: 'right' }}>
               {formatCurrency(total)}
             </span>
           </div>
         </div>
 
         {error && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', color: '#991b1b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <div style={{ background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', color: COLORS.accentRedDark, fontSize: '0.875rem', marginBottom: '1rem' }}>
             {error}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="submit" disabled={submitting} style={{ background: '#111827', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+          <button type="submit" disabled={submitting} style={{ background: COLORS.textPrimary, color: COLORS.white, border: 'none', borderRadius: '6px', padding: '0.625rem 1.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
             {submitting ? 'Saving...' : 'Create Requisition'}
           </button>
-          <Link href="/requisitions" style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
+          <Link href="/requisitions" style={{ background: COLORS.white, color: COLORS.textSecondary, border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
             Cancel
           </Link>
         </div>
@@ -313,7 +314,7 @@ function NewRequisitionContent() {
 
 export default function NewRequisitionPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '2rem', color: '#9ca3af' }}>Loading…</div>}>
+    <Suspense fallback={<div style={{ padding: '2rem', color: COLORS.textMuted }}>Loading…</div>}>
       <NewRequisitionContent />
     </Suspense>
   );

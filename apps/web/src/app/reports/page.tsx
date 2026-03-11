@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '../../lib/api';
+import { COLORS, SHADOWS } from '../../lib/theme';
 
 interface Report {
   id: string;
@@ -117,23 +118,23 @@ export default function ReportsPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>Reports</h1>
-        <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Export data as CSV for analysis in Excel or other tools.</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary }}>Reports</h1>
+        <p style={{ color: COLORS.textSecondary, fontSize: '0.875rem', marginTop: '0.25rem' }}>Export data as CSV for analysis in Excel or other tools.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
         {REPORTS.map((report) => (
-          <div key={report.id} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem' }}>
-            <div style={{ fontWeight: 600, color: '#111827', marginBottom: '0.375rem' }}>{report.title}</div>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1rem' }}>{report.description}</div>
+          <div key={report.id} style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '1.5rem', boxShadow: SHADOWS.card }}>
+            <div style={{ fontWeight: 600, color: COLORS.textPrimary, marginBottom: '0.375rem' }}>{report.title}</div>
+            <div style={{ fontSize: '0.875rem', color: COLORS.textSecondary, marginBottom: '1rem' }}>{report.description}</div>
 
             {report.params && report.params.map((p) => (
               <div key={p.key} style={{ marginBottom: '0.75rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>{p.label}</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>{p.label}</label>
                 <select
                   value={params[report.id]?.[p.key] || ''}
                   onChange={(e) => setParam(report.id, p.key, e.target.value)}
-                  style={{ width: '100%', padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.85rem' }}
+                  style={{ width: '100%', padding: '0.4rem 0.6rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.85rem' }}
                 >
                   {p.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -144,12 +145,12 @@ export default function ReportsPage() {
               onClick={() => download(report)}
               disabled={downloading === report.id}
               style={{
-                width: '100%', padding: '0.6rem', background: downloading === report.id ? '#93c5fd' : '#3b82f6',
-                color: '#fff', border: 'none', borderRadius: '6px', cursor: downloading === report.id ? 'not-allowed' : 'pointer',
+                width: '100%', padding: '0.6rem', background: downloading === report.id ? '#93c5fd' : COLORS.accentBlue,
+                color: COLORS.white, border: 'none', borderRadius: '6px', cursor: downloading === report.id ? 'not-allowed' : 'pointer',
                 fontWeight: 500, fontSize: '0.875rem', marginTop: '0.25rem',
               }}
             >
-              {downloading === report.id ? 'Downloading...' : '⬇ Download CSV'}
+              {downloading === report.id ? 'Downloading...' : 'Download CSV'}
             </button>
           </div>
         ))}
