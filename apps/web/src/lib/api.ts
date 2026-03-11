@@ -166,8 +166,10 @@ export const api = {
     },
   },
   ocr: {
+    list: () => apiFetch<any[]>('/ocr/jobs'),
     createJob: (data: unknown) => apiFetch<any>('/ocr/jobs', { method: 'POST', body: JSON.stringify(data) }),
     getJob: (id: string) => apiFetch<any>(`/ocr/jobs/${id}`),
+    linkToInvoice: (jobId: string, invoiceId: string) => apiFetch<any>(`/ocr/jobs/${jobId}/link/${invoiceId}`, { method: 'POST' }),
   },
   analytics: {
     kpis: () => apiFetch<any>('/analytics/kpis'),
