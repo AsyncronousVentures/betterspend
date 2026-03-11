@@ -139,13 +139,34 @@ export default function GRNDetailPage({ params }: { params: Promise<{ id: string
         </table>
       </div>
 
-      {grn.status === 'draft' && (
-        <div>
-          <button onClick={confirmGRN} disabled={confirming}
-            style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
-            {confirming ? 'Confirming…' : 'Confirm Receipt'}
+      {(grn.status === 'draft' || grn.status === 'confirmed') && (
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {grn.status === 'draft' && (
+            <button onClick={confirmGRN} disabled={confirming}
+              style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
+              {confirming ? 'Confirming…' : 'Confirm Receipt'}
+            </button>
+          )}
+          <button
+            onClick={async () => {
+              if (!confirm('Cancel this GRN?')) return;
+              setConfirming(true);
+              try {
+                await api.receiving.cancel(id);
+                const updated = await api.receiving.get(id);
+                setGrn(updated);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Cancel failed');
+              } finally {
+                setConfirming(false);
+              }
+            }}
+            disabled={confirming}
+            style={{ background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: confirming ? 'not-allowed' : 'pointer' }}
+          >
+            Cancel GRN
           </button>
-          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
+          {error && <div style={{ width: '100%', marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
         </div>
       )}
     </div>

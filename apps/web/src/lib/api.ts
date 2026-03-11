@@ -138,7 +138,8 @@ export const api = {
     list: () => apiFetch<any[]>('/receiving'),
     get: (id: string) => apiFetch<any>(`/receiving/${id}`),
     create: (data: unknown) => apiFetch<any>('/receiving', { method: 'POST', body: JSON.stringify(data) }),
-    confirm: (id: string) => apiFetch<any>(`/receiving/${id}/confirm`, { method: 'POST' }),
+    confirm: (id: string) => apiFetch<any>(`/receiving/${id}/confirm`, { method: 'PATCH' }),
+    cancel: (id: string) => apiFetch<any>(`/receiving/${id}/cancel`, { method: 'PATCH' }),
   },
   budgets: {
     list: () => apiFetch<any[]>('/budgets'),
