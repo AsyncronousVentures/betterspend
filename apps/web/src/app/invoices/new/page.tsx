@@ -88,12 +88,23 @@ export default function NewInvoicePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setOcrLoading(true);
-    setOcrStatus('Uploading…');
+    setOcrStatus('Reading file…');
     try {
-      // In production: upload file to MinIO presigned URL, get storageKey back.
-      // For now we submit the filename as the storageKey (stub flow).
-      const storageKey = `ocr-uploads/${Date.now()}-${file.name}`;
-      const job = await api.ocr.createJob({ filename: file.name, contentType: file.type, storageKey }) as OcrJob;
+      // Convert file to base64 for inline Claude Vision extraction
+      const base64Data: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip the "data:...;base64," prefix
+          resolve(result.split(',')[1] ?? result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      setOcrStatus('Extracting…');
+      const storageKey = `inline/${Date.now()}-${file.name}`;
+      const job = await api.ocr.createJob({ filename: file.name, contentType: file.type, storageKey, base64Data }) as OcrJob;
       setOcrJobId(job.id);
       setOcrStatus('Extracting…');
 
