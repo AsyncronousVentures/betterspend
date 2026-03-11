@@ -10,6 +10,7 @@ export default function DepartmentsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', code: '', parentId: '' });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => { load(); }, []);
 
@@ -18,8 +19,8 @@ export default function DepartmentsPage() {
       setLoading(true);
       const data = await api.departments.list();
       setDepartments(data);
-    } catch (e: any) {
-      alert(e.message);
+    } catch {
+      // silently fail — user sees empty state
     } finally {
       setLoading(false);
     }
@@ -27,6 +28,7 @@ export default function DepartmentsPage() {
 
   async function handleSave() {
     setSaving(true);
+    setError('');
     try {
       const payload = { name: form.name, code: form.code, parentId: form.parentId || undefined };
       if (editingId) {
@@ -39,7 +41,7 @@ export default function DepartmentsPage() {
       setForm({ name: '', code: '', parentId: '' });
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setSaving(false);
     }
@@ -51,7 +53,7 @@ export default function DepartmentsPage() {
       await api.departments.remove(id);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -94,11 +96,12 @@ export default function DepartmentsPage() {
               </select>
             </div>
           </div>
+          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
             <button onClick={handleSave} disabled={saving || !form.name || !form.code} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
               {saving ? 'Saving...' : 'Save'}
             </button>
-            <button onClick={() => setShowForm(false)} style={{ padding: '0.5rem 1rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={() => { setShowForm(false); setError(''); }} style={{ padding: '0.5rem 1rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}

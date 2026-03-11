@@ -18,12 +18,13 @@ export default function ProjectsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', code: '', departmentId: '', status: 'active', startDate: '', endDate: '' });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([api.projects.list(), api.departments.list()]).then(([p, d]) => {
       setProjects(p);
       setDepartments(d);
-    }).catch((e) => alert(e.message)).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   async function load() {
@@ -33,6 +34,7 @@ export default function ProjectsPage() {
 
   async function handleSave() {
     setSaving(true);
+    setError('');
     try {
       const payload = {
         name: form.name, code: form.code,
@@ -51,7 +53,7 @@ export default function ProjectsPage() {
       resetForm();
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setSaving(false);
     }
@@ -63,7 +65,7 @@ export default function ProjectsPage() {
       await api.projects.remove(id);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -128,11 +130,12 @@ export default function ProjectsPage() {
               <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '6px', boxSizing: 'border-box' }} />
             </div>
           </div>
+          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
             <button onClick={handleSave} disabled={saving || !form.name || !form.code} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
               {saving ? 'Saving...' : 'Save'}
             </button>
-            <button onClick={() => setShowForm(false)} style={{ padding: '0.5rem 1rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={() => { setShowForm(false); setError(''); }} style={{ padding: '0.5rem 1rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
