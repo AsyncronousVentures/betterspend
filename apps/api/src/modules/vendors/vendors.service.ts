@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { vendors } from '@betterspend/db';
@@ -39,5 +39,33 @@ export class VendorsService {
 
     if (!vendor) throw new NotFoundException(`Vendor ${id} not found`);
     return vendor;
+  }
+
+  async getTransactions(id: string, organizationId: string) {
+    await this.findOne(id, organizationId);
+
+    const [invoiceRows, poRows] = await Promise.all([
+      this.db.execute(sql`
+        SELECT
+          i.id, i.internal_number AS number, i.invoice_number AS "vendorInvoiceNumber",
+          i.status, i.match_status AS "matchStatus", i.total_amount::numeric AS amount,
+          i.invoice_date AS date, i.approved_at AS "approvedAt"
+        FROM invoices i
+        WHERE i.vendor_id = ${id} AND i.organization_id = ${organizationId}
+        ORDER BY i.created_at DESC
+        LIMIT 50
+      `),
+      this.db.execute(sql`
+        SELECT
+          po.id, po.internal_number AS number, po.status,
+          po.total_amount::numeric AS amount, po.issued_at AS "issuedAt", po.created_at AS date
+        FROM purchase_orders po
+        WHERE po.vendor_id = ${id} AND po.organization_id = ${organizationId}
+        ORDER BY po.created_at DESC
+        LIMIT 50
+      `),
+    ]);
+
+    return { invoices: invoiceRows, purchaseOrders: poRows };
   }
 }

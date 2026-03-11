@@ -39,6 +39,12 @@ export class VendorsController {
     });
   }
 
+  @Get(':id/transactions')
+  @ApiOperation({ summary: 'Get invoices and POs for a vendor' })
+  transactions(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.vendorsService.getTransactions(id, orgId);
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update a vendor' })
   update(
