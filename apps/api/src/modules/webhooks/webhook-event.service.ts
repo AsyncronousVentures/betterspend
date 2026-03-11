@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { WebhooksService } from './webhooks.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 export type WebhookEventType =
   | 'requisition.submitted'
@@ -22,16 +23,22 @@ export type WebhookEventType =
 export class WebhookEventService {
   private readonly logger = new Logger(WebhookEventService.name);
 
-  constructor(private readonly webhooksService: WebhooksService) {}
+  constructor(
+    @InjectQueue('webhook-delivery') private readonly webhookQueue: Queue,
+  ) {}
 
   emit(organizationId: string, eventType: WebhookEventType, payload: Record<string, unknown>): void {
-    // Fire-and-forget: do not await, never block the caller
-    setImmediate(() => {
-      this.webhooksService
-        .dispatchEvent(organizationId, eventType, payload)
-        .catch((err: unknown) =>
-          this.logger.error(`Failed to dispatch webhook event ${eventType}: ${String(err)}`),
-        );
-    });
+    this.webhookQueue
+      .add(
+        'dispatch',
+        { organizationId, eventType, payload },
+        {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 1000 },
+        },
+      )
+      .catch((err: unknown) =>
+        this.logger.error(`Failed to enqueue webhook event ${eventType}: ${String(err)}`),
+      );
   }
 }
