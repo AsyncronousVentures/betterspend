@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '../../../lib/api';
 
 interface PO {
@@ -12,8 +12,11 @@ interface PO {
   lines: Array<{ id: string; lineNumber: string; description: string; quantity: string; quantityReceived: string }>;
 }
 
-export default function NewGRNPage() {
+function NewGRNForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preSelectedPoId = searchParams.get('poId') ?? '';
+
   const [pos, setPOs] = useState<PO[]>([]);
   const [selectedPO, setSelectedPO] = useState<PO | null>(null);
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -29,6 +32,9 @@ export default function NewGRNPage() {
           ['approved', 'issued', 'partially_received'].includes(po.status),
         );
         setPOs(eligible);
+        if (preSelectedPoId) {
+          handlePOChange(preSelectedPoId);
+        }
       })
       .catch(() => {});
   }, []);
@@ -86,6 +92,7 @@ export default function NewGRNPage() {
                 Purchase Order *
               </label>
               <select
+                value={selectedPO?.id ?? ''}
                 onChange={(e) => handlePOChange(e.target.value)}
                 required
                 style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem' }}
@@ -199,5 +206,13 @@ export default function NewGRNPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewGRNPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', color: '#6b7280' }}>Loading…</div>}>
+      <NewGRNForm />
+    </Suspense>
   );
 }

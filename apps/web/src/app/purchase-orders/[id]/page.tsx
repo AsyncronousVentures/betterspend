@@ -184,6 +184,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
   const canIssue = po.status === 'draft' || po.status === 'approved';
   const canChangeOrder = po.status !== 'closed' && po.status !== 'cancelled';
   const canCancel = po.status !== 'closed' && po.status !== 'cancelled' && po.status !== 'received';
+  const canReceive = ['approved', 'issued', 'partially_received'].includes(po.status);
   const isBlanket = po.poType === 'blanket';
   const canCreateRelease = isBlanket && ['issued', 'approved', 'partially_received'].includes(po.status);
 
@@ -453,6 +454,12 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
           style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
           Download PDF
         </button>
+        {canReceive && (
+          <Link href={`/receiving/new?poId=${id}`}
+            style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+            Create GRN
+          </Link>
+        )}
         {canChangeOrder && (
           <button onClick={() => setChangeDialogOpen(true)} disabled={actionLoading !== null}
             style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
