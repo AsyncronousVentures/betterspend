@@ -4,6 +4,19 @@ import { useState, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '../../lib/auth-client';
+import { COLORS, SHADOWS } from '../../lib/theme';
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.625rem 0.875rem',
+  border: `1px solid ${COLORS.inputBorder}`,
+  borderRadius: '8px',
+  fontSize: '0.8125rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.15s, box-shadow 0.15s',
+  color: COLORS.textPrimary,
+};
 
 function LoginForm() {
   const router = useRouter();
@@ -34,30 +47,52 @@ function LoginForm() {
     }
   }
 
+  function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+    e.target.style.borderColor = COLORS.inputBorderFocus;
+    e.target.style.boxShadow = SHADOWS.focusRing;
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    e.target.style.borderColor = COLORS.inputBorder;
+    e.target.style.boxShadow = 'none';
+  }
+
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#f9fafb',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: COLORS.contentBg,
+      padding: '1rem',
     }}>
       <div style={{
-        background: '#fff', borderRadius: '12px', padding: '2.5rem',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)', width: '100%', maxWidth: '400px',
+        background: COLORS.white,
+        borderRadius: '12px',
+        padding: '2.5rem',
+        boxShadow: SHADOWS.auth,
+        width: '100%',
+        maxWidth: '400px',
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{
-            fontWeight: 700, fontSize: '1.5rem', color: '#111827', letterSpacing: '-0.02em',
+            fontWeight: 700,
+            fontSize: '1.625rem',
+            color: COLORS.textPrimary,
+            letterSpacing: '-0.03em',
           }}>
             BetterSpend
           </div>
-          <div style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.375rem' }}>
+          <div style={{ color: COLORS.textMuted, fontSize: '0.8125rem', marginTop: '0.375rem' }}>
             Sign in to your account
           </div>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.375rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.375rem' }}>
               Email
             </label>
             <input
@@ -66,19 +101,14 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@company.com"
-              style={{
-                width: '100%', padding: '0.625rem 0.875rem',
-                border: '1px solid #d1d5db', borderRadius: '8px',
-                fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-              onBlur={(e) => (e.target.style.borderColor = '#d1d5db')}
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.375rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.375rem' }}>
               Password
             </label>
             <input
@@ -87,21 +117,20 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              style={{
-                width: '100%', padding: '0.625rem 0.875rem',
-                border: '1px solid #d1d5db', borderRadius: '8px',
-                fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box',
-                transition: 'border-color 0.15s',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-              onBlur={(e) => (e.target.style.borderColor = '#d1d5db')}
+              style={inputStyle}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
             />
           </div>
 
           {error && (
             <div style={{
-              background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-              padding: '0.625rem 0.875rem', color: '#dc2626', fontSize: '0.875rem',
+              background: COLORS.accentRedLight,
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '0.625rem 0.875rem',
+              color: '#dc2626',
+              fontSize: '0.8125rem',
             }}>
               {error}
             </div>
@@ -111,23 +140,40 @@ function LoginForm() {
             type="submit"
             disabled={loading}
             style={{
-              background: loading ? '#93c5fd' : '#3b82f6',
-              color: '#fff', border: 'none', borderRadius: '8px',
-              padding: '0.75rem', fontSize: '0.875rem', fontWeight: 600,
+              background: loading ? '#93c5fd' : COLORS.accentBlue,
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.6875rem',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.15s', marginTop: '0.5rem',
+              transition: 'background 0.15s',
+              marginTop: '0.375rem',
             }}
+            onMouseEnter={(e) => { if (!loading) (e.currentTarget.style.background = COLORS.accentBlueDark); }}
+            onMouseLeave={(e) => { if (!loading) (e.currentTarget.style.background = COLORS.accentBlue); }}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280', marginTop: '1.5rem' }}>
+        <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: COLORS.textMuted, marginTop: '1.5rem' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
+          <Link href="/signup" style={{ color: COLORS.accentBlue, textDecoration: 'none', fontWeight: 500 }}>
             Sign up
           </Link>
         </p>
+      </div>
+
+      {/* Credit */}
+      <div style={{
+        marginTop: '1.5rem',
+        fontSize: '0.6875rem',
+        color: COLORS.textMuted,
+        textAlign: 'center',
+      }}>
+        Open Source Procure-to-Pay by Asynchronous Ventures LLC
       </div>
     </div>
   );

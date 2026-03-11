@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { COLORS, SHADOWS } from '../../lib/theme';
 
 function fmt(n: string | number | null | undefined) {
   if (n == null) return '—';
@@ -28,10 +29,10 @@ interface BudgetUtilRow { budgetId: string; budgetName: string; budgetType: stri
 
 
 const card: React.CSSProperties = {
-  background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem',
+  background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card,
 };
 const sectionTitle: React.CSSProperties = {
-  fontSize: '0.95rem', fontWeight: 700, color: '#111827', margin: '0 0 1rem',
+  fontSize: '0.95rem', fontWeight: 700, color: COLORS.textPrimary, margin: '0 0 1rem',
 };
 
 export default function AnalyticsPage() {
@@ -66,7 +67,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', color: '#9ca3af', fontSize: '0.875rem' }}>Loading analytics…</div>
+      <div style={{ padding: '2rem', color: COLORS.textMuted, fontSize: '0.875rem' }}>Loading analytics…</div>
     );
   }
 
@@ -78,8 +79,8 @@ export default function AnalyticsPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px' }}>
       <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>Analytics</h1>
-        <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Spend intelligence and operational metrics</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: COLORS.textPrimary }}>Analytics</h1>
+        <p style={{ margin: '0.25rem 0 0', color: COLORS.textSecondary, fontSize: '0.875rem' }}>Spend intelligence and operational metrics</p>
       </div>
 
       {/* KPI tiles */}
@@ -147,8 +148,8 @@ export default function AnalyticsPage() {
                 const pct = (Number(m.total) / maxMonthly) * 100;
                 return (
                   <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }} title={`${m.month}: ${fmt(m.total)}`}>
-                    <div style={{ width: '100%', background: '#2563eb', borderRadius: '3px 3px 0 0', height: `${Math.max(pct, 2)}%`, transition: 'height 0.3s' }} />
-                    <div style={{ fontSize: '0.6rem', color: '#6b7280', marginTop: '4px', textAlign: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', maxHeight: '36px', overflow: 'hidden' }}>{m.month.slice(5)}</div>
+                    <div style={{ width: '100%', background: COLORS.accentBlueDark, borderRadius: '3px 3px 0 0', height: `${Math.max(pct, 2)}%`, transition: 'height 0.3s' }} />
+                    <div style={{ fontSize: '0.6rem', color: COLORS.textSecondary, marginTop: '4px', textAlign: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', maxHeight: '36px', overflow: 'hidden' }}>{m.month.slice(5)}</div>
                   </div>
                 );
               })}
@@ -165,14 +166,14 @@ export default function AnalyticsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {aging.map((a) => {
                 const pct = (Number(a.total) / totalAging) * 100;
-                const color = a.bucket === '0-30 days' ? '#10b981' : a.bucket === '31-60 days' ? '#f59e0b' : a.bucket === '61-90 days' ? '#f97316' : '#ef4444';
+                const color = a.bucket === '0-30 days' ? COLORS.accentGreen : a.bucket === '31-60 days' ? COLORS.accentAmber : a.bucket === '61-90 days' ? '#f97316' : COLORS.accentRed;
                 return (
                   <div key={a.bucket}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
-                      <span style={{ color: '#374151', fontWeight: 500 }}>{a.bucket}</span>
-                      <span style={{ color: '#6b7280' }}>{fmt(a.total)} ({a.count})</span>
+                      <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>{a.bucket}</span>
+                      <span style={{ color: COLORS.textSecondary }}>{fmt(a.total)} ({a.count})</span>
                     </div>
-                    <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '8px' }}>
+                    <div style={{ background: COLORS.contentBg, borderRadius: '4px', height: '8px' }}>
                       <div style={{ background: color, width: `${pct}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
                     </div>
                   </div>
@@ -206,43 +207,45 @@ export default function AnalyticsPage() {
         {budgetUtil.length === 0 ? (
           <Empty text="No budgets for the current fiscal year" />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['Budget', 'Type', 'Scope', 'Allocated', 'Spent', 'Remaining', 'Utilization'].map((h) => (
-                  <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {budgetUtil.map((b) => {
-                const pct = Number(b.utilizationPct ?? 0);
-                const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
-                return (
-                  <tr key={b.budgetId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: '#111827' }}>{b.budgetName}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280', textTransform: 'capitalize' }}>{b.budgetType?.replace('_', ' ')}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280' }}>{b.departmentName ?? b.projectName ?? '—'}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{fmt(b.totalAmount)}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{fmt(b.spentAmount)}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: Number(b.remaining) < 0 ? '#ef4444' : '#374151', fontWeight: Number(b.remaining) < 0 ? 600 : 400 }}>
-                      {fmt(b.remaining)}
-                    </td>
-                    <td style={{ padding: '0.625rem 0.75rem', minWidth: '120px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ flex: 1, background: '#e5e7eb', borderRadius: 4, height: 6 }}>
-                          <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor, height: 6, borderRadius: 4 }} />
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ background: COLORS.tableHeaderBg, borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+                  {['Budget', 'Type', 'Scope', 'Allocated', 'Spent', 'Remaining', 'Utilization'].map((h) => (
+                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {budgetUtil.map((b) => {
+                  const pct = Number(b.utilizationPct ?? 0);
+                  const barColor = pct >= 100 ? COLORS.accentRed : pct >= 80 ? COLORS.accentAmber : '#22c55e';
+                  return (
+                    <tr key={b.budgetId} style={{ borderBottom: `1px solid ${COLORS.contentBg}` }}>
+                      <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: COLORS.textPrimary }}>{b.budgetName}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary, textTransform: 'capitalize' }}>{b.budgetType?.replace('_', ' ')}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{b.departmentName ?? b.projectName ?? '—'}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{fmt(b.totalAmount)}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{fmt(b.spentAmount)}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: Number(b.remaining) < 0 ? COLORS.accentRed : COLORS.textSecondary, fontWeight: Number(b.remaining) < 0 ? 600 : 400 }}>
+                        {fmt(b.remaining)}
+                      </td>
+                      <td style={{ padding: '0.625rem 0.75rem', minWidth: '120px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div style={{ flex: 1, background: COLORS.tableBorder, borderRadius: 4, height: 6 }}>
+                            <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor, height: 6, borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: pct >= 80 ? barColor : COLORS.textSecondary, fontWeight: pct >= 80 ? 600 : 400, minWidth: '36px', textAlign: 'right' }}>
+                            {b.utilizationPct != null ? `${b.utilizationPct}%` : '—'}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '0.75rem', color: pct >= 80 ? barColor : '#6b7280', fontWeight: pct >= 80 ? 600 : 400, minWidth: '36px', textAlign: 'right' }}>
-                          {b.utilizationPct != null ? `${b.utilizationPct}%` : '—'}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -252,36 +255,38 @@ export default function AnalyticsPage() {
         {vendPerf.length === 0 ? (
           <Empty text="No vendor data yet" />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['Vendor', 'Invoices', 'Exceptions', 'Exception Rate', 'Avg Days to Approve', 'Total Approved', 'POs'].map((h) => (
-                  <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {vendPerf.map((v) => {
-                const excRate = Number(v.exceptionRate ?? 0);
-                const excColor = excRate === 0 ? '#22c55e' : excRate < 20 ? '#f59e0b' : '#ef4444';
-                return (
-                  <tr key={v.vendorId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                    <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: '#111827' }}>{v.vendorName}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{v.invoiceCount}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{v.exceptionCount}</td>
-                    <td style={{ padding: '0.625rem 0.75rem' }}>
-                      <span style={{ color: excColor, fontWeight: 600 }}>{v.exceptionRate != null ? `${v.exceptionRate}%` : '—'}</span>
-                    </td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
-                      {v.avgDaysToApprove != null ? `${v.avgDaysToApprove} days` : '—'}
-                    </td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151', fontWeight: 500 }}>{fmt(v.totalApproved)}</td>
-                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280' }}>{v.poCount}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ background: COLORS.tableHeaderBg, borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+                  {['Vendor', 'Invoices', 'Exceptions', 'Exception Rate', 'Avg Days to Approve', 'Total Approved', 'POs'].map((h) => (
+                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vendPerf.map((v) => {
+                  const excRate = Number(v.exceptionRate ?? 0);
+                  const excColor = excRate === 0 ? '#22c55e' : excRate < 20 ? COLORS.accentAmber : COLORS.accentRed;
+                  return (
+                    <tr key={v.vendorId} style={{ borderBottom: `1px solid ${COLORS.contentBg}` }}>
+                      <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: COLORS.textPrimary }}>{v.vendorName}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{v.invoiceCount}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{v.exceptionCount}</td>
+                      <td style={{ padding: '0.625rem 0.75rem' }}>
+                        <span style={{ color: excColor, fontWeight: 600 }}>{v.exceptionRate != null ? `${v.exceptionRate}%` : '—'}</span>
+                      </td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>
+                        {v.avgDaysToApprove != null ? `${v.avgDaysToApprove} days` : '—'}
+                      </td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary, fontWeight: 500 }}>{fmt(v.totalApproved)}</td>
+                      <td style={{ padding: '0.625rem 0.75rem', color: COLORS.textSecondary }}>{v.poCount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -290,10 +295,10 @@ export default function AnalyticsPage() {
 
 function KpiTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
-      <div style={{ fontSize: '0.78rem', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{value}</div>
-      <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.25rem' }}>{sub}</div>
+    <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
+      <div style={{ fontSize: '0.78rem', fontWeight: 500, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary }}>{value}</div>
+      <div style={{ fontSize: '0.78rem', color: COLORS.textMuted, marginTop: '0.25rem' }}>{sub}</div>
     </div>
   );
 }
@@ -302,11 +307,11 @@ function BarRow({ label, value, pct, sub }: { label: string; value: string; pct:
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
-        <span style={{ color: '#111827', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{label}</span>
-        <span style={{ color: '#374151', fontWeight: 600 }}>{value} <span style={{ color: '#9ca3af', fontWeight: 400 }}>· {sub}</span></span>
+        <span style={{ color: COLORS.textPrimary, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{label}</span>
+        <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>{value} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>· {sub}</span></span>
       </div>
-      <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '6px' }}>
-        <div style={{ background: '#2563eb', width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+      <div style={{ background: COLORS.contentBg, borderRadius: '4px', height: '6px' }}>
+        <div style={{ background: COLORS.accentBlueDark, width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
       </div>
     </div>
   );
@@ -315,12 +320,12 @@ function BarRow({ label, value, pct, sub }: { label: string; value: string; pct:
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>{value}</div>
+      <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: COLORS.textPrimary }}>{value}</div>
     </div>
   );
 }
 
 function Empty({ text }: { text: string }) {
-  return <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0, padding: '1rem 0' }}>{text}</p>;
+  return <p style={{ fontSize: '0.875rem', color: COLORS.textMuted, margin: 0, padding: '1rem 0' }}>{text}</p>;
 }

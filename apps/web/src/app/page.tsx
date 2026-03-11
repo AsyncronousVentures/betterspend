@@ -3,19 +3,43 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '../lib/api';
+import { COLORS, SHADOWS } from '../lib/theme';
+import { useIsMobile } from '../lib/use-media-query';
 
 function fmt(n: string | number | null | undefined) {
   if (n == null) return '—';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(n));
 }
 
-function KpiCard({ label, value, sub, href, color = '#3b82f6' }: { label: string; value: string; sub?: string; href?: string; color?: string }) {
+const ACCENT_MAP: Record<string, { border: string; light: string; text: string }> = {
+  blue: { border: COLORS.accentBlue, light: COLORS.accentBlueLight, text: COLORS.accentBlueDark },
+  green: { border: COLORS.accentGreen, light: COLORS.accentGreenLight, text: COLORS.accentGreenDark },
+  amber: { border: COLORS.accentAmber, light: COLORS.accentAmberLight, text: COLORS.accentAmberDark },
+  purple: { border: COLORS.accentPurple, light: COLORS.accentPurpleLight, text: COLORS.accentPurpleDark },
+};
+
+function KpiCard({ label, value, sub, href, accent = 'blue' }: { label: string; value: string; sub?: string; href?: string; accent?: string }) {
+  const a = ACCENT_MAP[accent] ?? ACCENT_MAP.blue;
   const inner = (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem', textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</div>
-      <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#111827', lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '0.375rem' }}>{sub}</div>}
-      {href && <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: color, fontWeight: 500 }}>View →</div>}
+    <div style={{
+      background: COLORS.cardBg,
+      border: `1px solid ${COLORS.cardBorder}`,
+      borderLeft: `3px solid ${a.border}`,
+      borderRadius: '8px',
+      padding: '1.25rem',
+      textDecoration: 'none',
+      color: 'inherit',
+      display: 'block',
+      transition: 'box-shadow 0.2s',
+      boxShadow: SHADOWS.card,
+    }}
+      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = SHADOWS.cardHover)}
+      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = SHADOWS.card)}
+    >
+      <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</div>
+      <div style={{ fontSize: '1.625rem', fontWeight: 700, color: COLORS.textPrimary, lineHeight: 1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '0.8rem', color: COLORS.textMuted, marginTop: '0.375rem' }}>{sub}</div>}
+      {href && <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: a.border, fontWeight: 500 }}>View &rarr;</div>}
     </div>
   );
   return href ? <Link href={href} style={{ textDecoration: 'none' }}>{inner}</Link> : inner;
@@ -27,16 +51,17 @@ function ActionItem({ label, count, href, urgent }: { label: string; count: numb
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0.75rem 1rem', borderBottom: '1px solid #f3f4f6', cursor: 'pointer',
+        padding: '0.75rem 1rem', borderBottom: `1px solid ${COLORS.contentBg}`, cursor: 'pointer',
+        transition: 'background 0.1s',
       }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#f9fafb')}
+        onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.hoverBg)}
         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
       >
-        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{label}</span>
+        <span style={{ fontSize: '0.8125rem', color: COLORS.textSecondary }}>{label}</span>
         <span style={{
-          background: urgent ? '#fee2e2' : '#fef3c7',
-          color: urgent ? '#991b1b' : '#92400e',
-          padding: '0.15rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700,
+          background: urgent ? COLORS.accentRedLight : COLORS.accentAmberLight,
+          color: urgent ? COLORS.accentRedDark : COLORS.accentAmberDark,
+          padding: '0.15rem 0.6rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600,
         }}>{count}</span>
       </div>
     </Link>
@@ -48,6 +73,7 @@ export default function HomePage() {
   const [pending, setPending] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     Promise.all([
@@ -71,40 +97,40 @@ export default function HomePage() {
     : 0;
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ marginBottom: '1.75rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0 }}>Dashboard</h1>
-        <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>Welcome to BetterSpend — your P2P control center</p>
+    <div style={{ padding: isMobile ? '1.25rem 1rem' : '2rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.375rem', fontWeight: 700, color: COLORS.textPrimary, margin: 0 }}>Dashboard</h1>
+        <p style={{ color: COLORS.textMuted, fontSize: '0.8125rem', marginTop: '0.25rem' }}>Welcome to BetterSpend — your P2P control center</p>
       </div>
 
       {/* KPI grid */}
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem', height: '100px' }} />
+            <div key={i} style={{ background: COLORS.hoverBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', padding: '1.25rem', height: '100px' }} />
           ))}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.75rem' }}>
-          <KpiCard label="Active POs" value={String(po?.active ?? 0)} sub={`${po?.total ?? 0} total · ${fmt(po?.totalValue)} committed`} href="/purchase-orders" />
-          <KpiCard label="Open Requisitions" value={String(req?.total ?? 0)} sub="pending approval or in progress" href="/requisitions" color="#10b981" />
-          <KpiCard label="Invoices Paid" value={fmt(inv?.paid)} sub={`${fmt(inv?.pending)} still pending`} href="/invoices" color="#f59e0b" />
-          <KpiCard label="Annual Budget" value={fmt(bud?.totalBudget)} sub="all active budgets combined" href="/budgets" color="#8b5cf6" />
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <KpiCard label="Active POs" value={String(po?.active ?? 0)} sub={`${po?.total ?? 0} total · ${fmt(po?.totalValue)} committed`} href="/purchase-orders" accent="blue" />
+          <KpiCard label="Open Requisitions" value={String(req?.total ?? 0)} sub="pending approval or in progress" href="/requisitions" accent="green" />
+          <KpiCard label="Invoices Paid" value={fmt(inv?.paid)} sub={`${fmt(inv?.pending)} still pending`} href="/invoices" accent="amber" />
+          <KpiCard label="Annual Budget" value={fmt(bud?.totalBudget)} sub="all active budgets combined" href="/budgets" accent="purple" />
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         {/* Action items */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>Action Required</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', overflow: 'hidden', boxShadow: SHADOWS.card }}>
+          <div style={{ padding: '0.875rem 1rem', borderBottom: `1px solid ${COLORS.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textPrimary }}>Action Required</h2>
             {totalActions > 0 && (
-              <span style={{ background: '#ef4444', color: '#fff', padding: '0.15rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700 }}>{totalActions}</span>
+              <span style={{ background: COLORS.badgeRed, color: '#fff', padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600 }}>{totalActions}</span>
             )}
           </div>
           {!pending || totalActions === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
-              {loading ? 'Loading…' : 'All caught up!'}
+            <div style={{ padding: '2rem', textAlign: 'center', color: COLORS.textMuted, fontSize: '0.8125rem' }}>
+              {loading ? 'Loading...' : 'All caught up!'}
             </div>
           ) : (
             <div>
@@ -118,26 +144,26 @@ export default function HomePage() {
         </div>
 
         {/* Recent activity */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
-          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>Recent Activity</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', overflow: 'hidden', boxShadow: SHADOWS.card }}>
+          <div style={{ padding: '0.875rem 1rem', borderBottom: `1px solid ${COLORS.cardBorder}` }}>
+            <h2 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textPrimary }}>Recent Activity</h2>
           </div>
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: COLORS.textMuted, fontSize: '0.8125rem' }}>Loading...</div>
           ) : activity.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>No recent activity</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: COLORS.textMuted, fontSize: '0.8125rem' }}>No recent activity</div>
           ) : (
             <div style={{ overflowY: 'auto', maxHeight: '280px' }}>
               {activity.slice(0, 12).map((item, i) => (
-                <div key={item.id ?? i} style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #f9fafb', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', marginTop: '0.4rem', flexShrink: 0 }} />
+                <div key={item.id ?? i} style={{ padding: '0.5rem 1rem', borderBottom: `1px solid ${COLORS.contentBg}`, display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: COLORS.accentBlue, marginTop: '0.4rem', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.8rem', color: '#374151' }}>
-                      <span style={{ fontWeight: 600 }}>{item.userName ?? 'System'}</span>{' '}
-                      <span style={{ color: '#6b7280' }}>{item.action}</span>{' '}
-                      <span style={{ color: '#9ca3af', textTransform: 'capitalize' }}>{String(item.entityType ?? '').replace(/_/g, ' ')}</span>
+                    <div style={{ fontSize: '0.8rem', color: COLORS.textSecondary }}>
+                      <span style={{ fontWeight: 600, color: COLORS.textPrimary }}>{item.userName ?? 'System'}</span>{' '}
+                      <span>{item.action}</span>{' '}
+                      <span style={{ color: COLORS.textMuted, textTransform: 'capitalize' }}>{String(item.entityType ?? '').replace(/_/g, ' ')}</span>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>
+                    <div style={{ fontSize: '0.6875rem', color: COLORS.textMuted, marginTop: '0.125rem' }}>
                       {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
                     </div>
                   </div>
@@ -148,29 +174,47 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div style={{ marginBottom: '1.75rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '0.75rem' }}>Quick Actions</h2>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      {/* Quick actions — softer style */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick Actions</h2>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {[
-            { label: '+ New Requisition', href: '/requisitions/new', bg: '#3b82f6' },
-            { label: '+ New PO', href: '/purchase-orders/new', bg: '#10b981' },
-            { label: '+ Receive Goods', href: '/receiving/new', bg: '#f59e0b' },
-            { label: '+ New Invoice', href: '/invoices/new', bg: '#8b5cf6' },
-            { label: '+ New Vendor', href: '/vendors/new', bg: '#6b7280' },
-            { label: '+ New Budget', href: '/budgets/new', bg: '#374151' },
-          ].map((a) => (
-            <Link key={a.href} href={a.href} style={{ padding: '0.5rem 1rem', background: a.bg, color: '#fff', borderRadius: '6px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
-              {a.label}
-            </Link>
-          ))}
+            { label: 'New Requisition', href: '/requisitions/new', accent: 'blue' },
+            { label: 'New PO', href: '/purchase-orders/new', accent: 'green' },
+            { label: 'Receive Goods', href: '/receiving/new', accent: 'amber' },
+            { label: 'New Invoice', href: '/invoices/new', accent: 'purple' },
+            { label: 'New Vendor', href: '/vendors/new', accent: 'neutral' },
+            { label: 'New Budget', href: '/budgets/new', accent: 'neutral' },
+          ].map((a) => {
+            const ac = a.accent === 'neutral'
+              ? { bg: COLORS.contentBg, text: COLORS.textSecondary, border: COLORS.border }
+              : { bg: (ACCENT_MAP[a.accent] ?? ACCENT_MAP.blue).light, text: (ACCENT_MAP[a.accent] ?? ACCENT_MAP.blue).text, border: 'transparent' };
+            return (
+              <Link key={a.href} href={a.href} style={{
+                padding: '0.4375rem 0.875rem',
+                background: ac.bg,
+                color: ac.text,
+                border: `1px solid ${ac.border}`,
+                borderRadius: '6px',
+                textDecoration: 'none',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                transition: 'opacity 0.15s',
+              }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+              >
+                + {a.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
       {/* Module overview */}
       <div>
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#374151', marginBottom: '0.75rem' }}>Modules</h2>
-        <div style={{ display: 'grid', gap: '0.75rem', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+        <h2 style={{ fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Modules</h2>
+        <div style={{ display: 'grid', gap: '0.625rem', gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(150px, 1fr))' : 'repeat(auto-fill, minmax(200px, 1fr))' }}>
           {[
             { title: 'Vendors', href: '/vendors', desc: 'Supplier master records & contracts' },
             { title: 'Catalog', href: '/catalog', desc: 'Pre-approved items for requisitions' },
@@ -185,12 +229,22 @@ export default function HomePage() {
             { title: 'Approval Rules', href: '/approval-rules', desc: 'Configure auto-routing rules' },
             { title: 'Webhooks', href: '/webhooks', desc: 'Outbound event integrations' },
           ].map((item) => (
-            <Link key={item.href} href={item.href} style={{ display: 'block', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', textDecoration: 'none', color: 'inherit' }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#3b82f6')}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
+            <Link key={item.href} href={item.href} style={{
+              display: 'block',
+              padding: '0.875rem',
+              background: COLORS.cardBg,
+              borderRadius: '8px',
+              border: `1px solid ${COLORS.cardBorder}`,
+              textDecoration: 'none',
+              color: 'inherit',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+              boxShadow: SHADOWS.card,
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.accentBlue; e.currentTarget.style.boxShadow = SHADOWS.cardHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.cardBorder; e.currentTarget.style.boxShadow = SHADOWS.card; }}
             >
-              <div style={{ fontWeight: 600, color: '#111827', fontSize: '0.9rem', marginBottom: '0.25rem' }}>{item.title}</div>
-              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{item.desc}</div>
+              <div style={{ fontWeight: 600, color: COLORS.textPrimary, fontSize: '0.8125rem', marginBottom: '0.25rem' }}>{item.title}</div>
+              <div style={{ fontSize: '0.75rem', color: COLORS.textMuted }}>{item.desc}</div>
             </Link>
           ))}
         </div>

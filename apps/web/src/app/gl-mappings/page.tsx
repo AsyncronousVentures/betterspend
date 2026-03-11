@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { COLORS, SHADOWS } from '../../lib/theme';
 
 type TargetSystem = 'qbo' | 'xero';
 
@@ -32,14 +33,14 @@ interface GlExportJob {
 const SYSTEM_LABELS: Record<string, string> = { qbo: 'QuickBooks Online', xero: 'Xero' };
 
 const JOB_STATUS_COLORS: Record<string, { background: string; color: string }> = {
-  pending:  { background: '#fef3c7', color: '#92400e' },
-  exported: { background: '#d1fae5', color: '#065f46' },
-  failed:   { background: '#fee2e2', color: '#991b1b' },
-  skipped:  { background: '#f3f4f6', color: '#6b7280' },
+  pending:  { background: '#fef3c7', color: COLORS.accentAmberDark },
+  exported: { background: '#d1fae5', color: COLORS.accentGreenDark },
+  failed:   { background: '#fee2e2', color: COLORS.accentRedDark },
+  skipped:  { background: COLORS.contentBg, color: COLORS.textSecondary },
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const style = JOB_STATUS_COLORS[status] ?? { background: '#f3f4f6', color: '#374151' };
+  const style = JOB_STATUS_COLORS[status] ?? { background: COLORS.contentBg, color: COLORS.textSecondary };
   return (
     <span style={{ ...style, padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, display: 'inline-block', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
       {status}
@@ -49,24 +50,24 @@ function StatusBadge({ status }: { status: string }) {
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', ...style }}>
+    <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', overflow: 'hidden', boxShadow: SHADOWS.card, ...style }}>
       {children}
     </div>
   );
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db',
+  width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`,
   borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box',
 };
 
 const btnPrimary: React.CSSProperties = {
-  background: '#111827', color: '#fff', border: 'none', padding: '0.5rem 1.25rem',
+  background: COLORS.textPrimary, color: COLORS.white, border: 'none', padding: '0.5rem 1.25rem',
   borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer',
 };
 
 const btnDanger: React.CSSProperties = {
-  background: 'transparent', color: '#dc2626', border: '1px solid #dc2626',
+  background: 'transparent', color: COLORS.accentRedDark, border: `1px solid ${COLORS.accentRedDark}`,
   padding: '0.25rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer',
 };
 
@@ -130,18 +131,18 @@ export default function GlMappingsPage() {
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '0.5rem 1rem', fontSize: '0.875rem', fontWeight: active ? 600 : 400,
-    borderBottom: active ? '2px solid #111827' : '2px solid transparent',
-    color: active ? '#111827' : '#6b7280', cursor: 'pointer', background: 'none', border: 'none',
+    borderBottom: active ? `2px solid ${COLORS.textPrimary}` : '2px solid transparent',
+    color: active ? COLORS.textPrimary : COLORS.textSecondary, cursor: 'pointer', background: 'none', border: 'none',
     borderBottomWidth: '2px', borderBottomStyle: 'solid',
-    borderBottomColor: active ? '#111827' : 'transparent',
+    borderBottomColor: active ? COLORS.textPrimary : 'transparent',
   });
 
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>GL Integration</h1>
-          <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.875rem' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: COLORS.textPrimary }}>GL Integration</h1>
+          <p style={{ margin: '0.25rem 0 0', color: COLORS.textSecondary, fontSize: '0.875rem' }}>
             Map internal GL accounts to QuickBooks Online or Xero account codes
           </p>
         </div>
@@ -153,7 +154,7 @@ export default function GlMappingsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #e5e7eb', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${COLORS.border}`, marginBottom: '1.5rem' }}>
         <button style={tabStyle(activeTab === 'mappings')} onClick={() => setActiveTab('mappings')}>
           Account Mappings
         </button>
@@ -165,11 +166,11 @@ export default function GlMappingsPage() {
       {/* Create form */}
       {activeTab === 'mappings' && showForm && (
         <Card style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
-          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: '#111827' }}>New GL Mapping</h3>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: COLORS.textPrimary }}>New GL Mapping</h3>
           <form onSubmit={handleCreate}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                   GL Account Code *
                 </label>
                 <input
@@ -179,7 +180,7 @@ export default function GlMappingsPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                   GL Account Name
                 </label>
                 <input
@@ -189,7 +190,7 @@ export default function GlMappingsPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                   Target System *
                 </label>
                 <select
@@ -201,7 +202,7 @@ export default function GlMappingsPage() {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                   External Account Code *
                 </label>
                 <input
@@ -211,7 +212,7 @@ export default function GlMappingsPage() {
                 />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
                   External Account Name
                 </label>
                 <input
@@ -221,7 +222,7 @@ export default function GlMappingsPage() {
                 />
               </div>
             </div>
-            {formError && <div style={{ marginBottom: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{formError}</div>}
+            {formError && <div style={{ marginBottom: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: COLORS.accentRedDark, fontSize: '0.875rem' }}>{formError}</div>}
             <button type="submit" style={btnPrimary} disabled={saving}>
               {saving ? 'Saving…' : 'Save Mapping'}
             </button>
@@ -233,7 +234,7 @@ export default function GlMappingsPage() {
       {activeTab === 'mappings' && (
         <>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center' }}>
-            <label style={{ fontSize: '0.875rem', color: '#374151', fontWeight: 500 }}>Filter by system:</label>
+            <label style={{ fontSize: '0.875rem', color: COLORS.textSecondary, fontWeight: 500 }}>Filter by system:</label>
             <select
               style={{ ...inputStyle, width: 'auto' }}
               value={filterSystem}
@@ -247,43 +248,45 @@ export default function GlMappingsPage() {
 
           <Card>
             {loading ? (
-              <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Loading…</div>
+              <div style={{ padding: '3rem', textAlign: 'center', color: COLORS.textMuted }}>Loading…</div>
             ) : mappings.length === 0 ? (
-              <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#9ca3af' }}>
-                <p style={{ fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>No mappings configured</p>
+              <div style={{ padding: '4rem 2rem', textAlign: 'center', color: COLORS.textMuted }}>
+                <p style={{ fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.5rem' }}>No mappings configured</p>
                 <p style={{ fontSize: '0.875rem' }}>Add a mapping to enable GL export when invoices are approved.</p>
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                    {['GL Account', 'GL Account Name', 'Target System', 'External Code', 'External Name', 'Active', ''].map((col) => (
-                      <th key={col} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mappings.map((m, idx) => (
-                    <tr key={m.id} style={{ borderBottom: idx < mappings.length - 1 ? '1px solid #f3f4f6' : undefined }}>
-                      <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: '#111827' }}>{m.glAccount}</td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{m.glAccountName ?? '—'}</td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{SYSTEM_LABELS[m.targetSystem] ?? m.targetSystem}</td>
-                      <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', color: '#2563eb' }}>{m.externalAccountCode}</td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{m.externalAccountName ?? '—'}</td>
-                      <td style={{ padding: '0.875rem 1rem' }}>
-                        <span style={{ color: m.isActive ? '#059669' : '#9ca3af', fontWeight: 600, fontSize: '0.8rem' }}>
-                          {m.isActive ? 'Yes' : 'No'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.875rem 1rem' }}>
-                        <button style={btnDanger} onClick={() => handleDelete(m.id)}>Delete</button>
-                      </td>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${COLORS.tableBorder}`, background: COLORS.tableHeaderBg }}>
+                      {['GL Account', 'GL Account Name', 'Target System', 'External Code', 'External Name', 'Active', ''].map((col) => (
+                        <th key={col} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {col}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {mappings.map((m, idx) => (
+                      <tr key={m.id} style={{ borderBottom: idx < mappings.length - 1 ? `1px solid ${COLORS.contentBg}` : undefined }}>
+                        <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: COLORS.textPrimary }}>{m.glAccount}</td>
+                        <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>{m.glAccountName ?? '—'}</td>
+                        <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>{SYSTEM_LABELS[m.targetSystem] ?? m.targetSystem}</td>
+                        <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', color: COLORS.accentBlueDark }}>{m.externalAccountCode}</td>
+                        <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>{m.externalAccountName ?? '—'}</td>
+                        <td style={{ padding: '0.875rem 1rem' }}>
+                          <span style={{ color: m.isActive ? '#059669' : COLORS.textMuted, fontWeight: 600, fontSize: '0.8rem' }}>
+                            {m.isActive ? 'Yes' : 'No'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.875rem 1rem' }}>
+                          <button style={btnDanger} onClick={() => handleDelete(m.id)}>Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Card>
         </>
@@ -293,48 +296,50 @@ export default function GlMappingsPage() {
       {activeTab === 'jobs' && (
         <Card>
           {loading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Loading…</div>
+            <div style={{ padding: '3rem', textAlign: 'center', color: COLORS.textMuted }}>Loading…</div>
           ) : jobs.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#9ca3af' }}>
-              <p style={{ fontWeight: 500, color: '#6b7280', marginBottom: '0.5rem' }}>No export jobs yet</p>
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: COLORS.textMuted }}>
+              <p style={{ fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.5rem' }}>No export jobs yet</p>
               <p style={{ fontSize: '0.875rem' }}>Jobs are created automatically when invoices are approved.</p>
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                  {['Invoice', 'Target System', 'Status', 'External ID', 'Exported At', 'Error'].map((col) => (
-                    <th key={col} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map((job, idx) => (
-                  <tr key={job.id} style={{ borderBottom: idx < jobs.length - 1 ? '1px solid #f3f4f6' : undefined }}>
-                    <td style={{ padding: '0.875rem 1rem', fontWeight: 600, color: '#111827' }}>
-                      {job.invoice?.internalNumber ?? job.invoiceId.slice(0, 8)}
-                    </td>
-                    <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>
-                      {SYSTEM_LABELS[job.targetSystem] ?? job.targetSystem}
-                    </td>
-                    <td style={{ padding: '0.875rem 1rem' }}>
-                      <StatusBadge status={job.status} />
-                    </td>
-                    <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#6b7280' }}>
-                      {job.externalId ?? '—'}
-                    </td>
-                    <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>
-                      {job.exportedAt ? new Date(job.exportedAt).toLocaleDateString() : '—'}
-                    </td>
-                    <td style={{ padding: '0.875rem 1rem', color: '#dc2626', fontSize: '0.8rem', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {job.errorMessage ?? '—'}
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${COLORS.tableBorder}`, background: COLORS.tableHeaderBg }}>
+                    {['Invoice', 'Target System', 'Status', 'External ID', 'Exported At', 'Error'].map((col) => (
+                      <th key={col} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {col}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {jobs.map((job, idx) => (
+                    <tr key={job.id} style={{ borderBottom: idx < jobs.length - 1 ? `1px solid ${COLORS.contentBg}` : undefined }}>
+                      <td style={{ padding: '0.875rem 1rem', fontWeight: 600, color: COLORS.textPrimary }}>
+                        {job.invoice?.internalNumber ?? job.invoiceId.slice(0, 8)}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>
+                        {SYSTEM_LABELS[job.targetSystem] ?? job.targetSystem}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem' }}>
+                        <StatusBadge status={job.status} />
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', fontSize: '0.8rem', color: COLORS.textSecondary }}>
+                        {job.externalId ?? '—'}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>
+                        {job.exportedAt ? new Date(job.exportedAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', color: COLORS.accentRedDark, fontSize: '0.8rem', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {job.errorMessage ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       )}

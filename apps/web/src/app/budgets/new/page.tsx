@@ -4,16 +4,17 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db',
-  borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box', background: '#fff', color: '#111827',
+  width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`,
+  borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box', background: COLORS.white, color: COLORS.textPrimary,
 };
 
 const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem',
+  display: 'block', fontSize: '0.8rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.375rem',
 };
 
 export default function NewBudgetPage() {
@@ -68,13 +69,13 @@ export default function NewBudgetPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '640px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/budgets" style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}>← Back to Budgets</Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: '#111827' }}>New Budget</h1>
+        <Link href="/budgets" style={{ color: COLORS.textSecondary, fontSize: '0.875rem', textDecoration: 'none' }}>← Back to Budgets</Link>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: COLORS.textPrimary }}>New Budget</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: '#111827' }}>Budget Details</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem', boxShadow: SHADOWS.card }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: COLORS.textPrimary }}>Budget Details</h2>
           <div style={{ display: 'grid', gap: '1rem' }}>
             <div>
               <label style={labelStyle}>Name *</label>
@@ -133,16 +134,16 @@ export default function NewBudgetPage() {
         </div>
 
         {error && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', color: '#991b1b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <div style={{ background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', color: COLORS.accentRedDark, fontSize: '0.875rem', marginBottom: '1rem' }}>
             {error}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="submit" disabled={submitting} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
+          <button type="submit" disabled={submitting} style={{ background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', padding: '0.625rem 1.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
             {submitting ? 'Saving...' : 'Create Budget'}
           </button>
-          <Link href="/budgets" style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
+          <Link href="/budgets" style={{ background: COLORS.white, color: COLORS.textSecondary, border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
             Cancel
           </Link>
         </div>

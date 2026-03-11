@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 interface Vendor {
   id: string;
@@ -22,20 +23,20 @@ const EMPTY_LINE: LineItem = { description: '', qty: '1', uom: 'each', unitPrice
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.5rem 0.75rem',
-  border: '1px solid #d1d5db',
+  border: `1px solid ${COLORS.inputBorder}`,
   borderRadius: '6px',
   fontSize: '0.875rem',
   boxSizing: 'border-box',
   outline: 'none',
-  background: '#fff',
-  color: '#111827',
+  background: COLORS.white,
+  color: COLORS.textPrimary,
 };
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: '0.8rem',
   fontWeight: 600,
-  color: '#374151',
+  color: COLORS.textSecondary,
   marginBottom: '0.375rem',
 };
 
@@ -131,11 +132,11 @@ export default function NewPurchaseOrderPage() {
       <div style={{ marginBottom: '1.5rem' }}>
         <Link
           href="/purchase-orders"
-          style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}
+          style={{ color: COLORS.textSecondary, fontSize: '0.875rem', textDecoration: 'none' }}
         >
           &larr; Back to Purchase Orders
         </Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: '#111827' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: COLORS.textPrimary }}>
           New Purchase Order
         </h1>
       </div>
@@ -144,14 +145,15 @@ export default function NewPurchaseOrderPage() {
         {/* Details card */}
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
+            background: COLORS.cardBg,
+            border: `1px solid ${COLORS.tableBorder}`,
             borderRadius: '8px',
             padding: '1.5rem',
             marginBottom: '1.25rem',
+            boxShadow: SHADOWS.card,
           }}
         >
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: '#111827' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: COLORS.textPrimary }}>
             Details
           </h2>
 
@@ -159,16 +161,16 @@ export default function NewPurchaseOrderPage() {
             {/* Vendor select */}
             <div>
               <label style={labelStyle}>
-                Vendor <span style={{ color: '#ef4444' }}>*</span>
+                Vendor <span style={{ color: COLORS.accentRed }}>*</span>
               </label>
               {vendorsLoading ? (
-                <div style={{ fontSize: '0.875rem', color: '#9ca3af', padding: '0.5rem 0' }}>
+                <div style={{ fontSize: '0.875rem', color: COLORS.textMuted, padding: '0.5rem 0' }}>
                   Loading vendors...
                 </div>
               ) : vendors.length === 0 ? (
-                <div style={{ fontSize: '0.875rem', color: '#ef4444', padding: '0.5rem 0' }}>
+                <div style={{ fontSize: '0.875rem', color: COLORS.accentRed, padding: '0.5rem 0' }}>
                   No vendors found. Please{' '}
-                  <Link href="/vendors/new" style={{ color: '#2563eb' }}>
+                  <Link href="/vendors/new" style={{ color: COLORS.accentBlueDark }}>
                     create a vendor
                   </Link>{' '}
                   first.
@@ -231,11 +233,12 @@ export default function NewPurchaseOrderPage() {
         {/* Line items card */}
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
+            background: COLORS.cardBg,
+            border: `1px solid ${COLORS.tableBorder}`,
             borderRadius: '8px',
             padding: '1.5rem',
             marginBottom: '1.25rem',
+            boxShadow: SHADOWS.card,
           }}
         >
           <div
@@ -246,7 +249,7 @@ export default function NewPurchaseOrderPage() {
               marginBottom: '1rem',
             }}
           >
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: COLORS.textPrimary }}>
               Line Items
             </h2>
             <button
@@ -254,12 +257,12 @@ export default function NewPurchaseOrderPage() {
               onClick={addLine}
               style={{
                 background: 'transparent',
-                border: '1px solid #d1d5db',
+                border: `1px solid ${COLORS.inputBorder}`,
                 borderRadius: '6px',
                 padding: '0.375rem 0.875rem',
                 fontSize: '0.8rem',
                 cursor: 'pointer',
-                color: '#374151',
+                color: COLORS.textSecondary,
                 fontWeight: 500,
               }}
             >
@@ -282,7 +285,7 @@ export default function NewPurchaseOrderPage() {
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#6b7280',
+                  color: COLORS.textSecondary,
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
                 }}
@@ -338,7 +341,7 @@ export default function NewPurchaseOrderPage() {
                 <div
                   style={{
                     fontSize: '0.875rem',
-                    color: '#374151',
+                    color: COLORS.textSecondary,
                     fontVariantNumeric: 'tabular-nums',
                     textAlign: 'right',
                     paddingRight: '0.25rem',
@@ -354,7 +357,7 @@ export default function NewPurchaseOrderPage() {
                     background: 'transparent',
                     border: 'none',
                     cursor: lines.length === 1 ? 'not-allowed' : 'pointer',
-                    color: lines.length === 1 ? '#d1d5db' : '#ef4444',
+                    color: lines.length === 1 ? COLORS.inputBorder : COLORS.accentRed,
                     fontSize: '1rem',
                     padding: '0.25rem',
                   }}
@@ -369,7 +372,7 @@ export default function NewPurchaseOrderPage() {
           {/* Total row */}
           <div
             style={{
-              borderTop: '1px solid #e5e7eb',
+              borderTop: `1px solid ${COLORS.tableBorder}`,
               marginTop: '0.75rem',
               paddingTop: '0.75rem',
               display: 'flex',
@@ -378,12 +381,12 @@ export default function NewPurchaseOrderPage() {
               alignItems: 'center',
             }}
           >
-            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151' }}>Total</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: COLORS.textSecondary }}>Total</span>
             <span
               style={{
                 fontSize: '1rem',
                 fontWeight: 700,
-                color: '#111827',
+                color: COLORS.textPrimary,
                 fontVariantNumeric: 'tabular-nums',
                 minWidth: '120px',
                 textAlign: 'right',
@@ -398,11 +401,11 @@ export default function NewPurchaseOrderPage() {
         {error && (
           <div
             style={{
-              background: '#fee2e2',
+              background: COLORS.accentRedLight,
               border: '1px solid #fca5a5',
               borderRadius: '6px',
               padding: '0.75rem 1rem',
-              color: '#991b1b',
+              color: COLORS.accentRedDark,
               fontSize: '0.875rem',
               marginBottom: '1rem',
             }}
@@ -417,8 +420,8 @@ export default function NewPurchaseOrderPage() {
             type="submit"
             disabled={submitting || vendorsLoading}
             style={{
-              background: '#111827',
-              color: '#fff',
+              background: COLORS.textPrimary,
+              color: COLORS.white,
               border: 'none',
               borderRadius: '6px',
               padding: '0.625rem 1.5rem',
@@ -433,9 +436,9 @@ export default function NewPurchaseOrderPage() {
           <Link
             href="/purchase-orders"
             style={{
-              background: '#fff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
+              background: COLORS.white,
+              color: COLORS.textSecondary,
+              border: `1px solid ${COLORS.inputBorder}`,
               borderRadius: '6px',
               padding: '0.625rem 1.25rem',
               fontSize: '0.875rem',

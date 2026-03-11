@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -56,15 +57,15 @@ export default function VendorDetailPage() {
     setForm((f: any) => ({ ...f, [key]: value }));
   }
 
-  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
-  const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' };
+  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
+  const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' };
 
   const [punchoutSaving, setPunchoutSaving] = useState(false);
 
   const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
     active: { bg: '#dcfce7', text: '#15803d' },
-    inactive: { bg: '#f3f4f6', text: '#6b7280' },
-    blocked: { bg: '#fee2e2', text: '#dc2626' },
+    inactive: { bg: COLORS.hoverBg, text: COLORS.textSecondary },
+    blocked: { bg: COLORS.accentRedLight, text: COLORS.accentRedDark },
   };
 
   async function togglePunchout() {
@@ -79,25 +80,25 @@ export default function VendorDetailPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', color: '#6b7280' }}>Loading...</div>;
-  if (error && !vendor) return <div style={{ padding: '2rem', color: '#dc2626' }}>{error}</div>;
+  if (loading) return <div style={{ padding: '2rem', color: COLORS.textSecondary }}>Loading...</div>;
+  if (error && !vendor) return <div style={{ padding: '2rem', color: COLORS.accentRedDark }}>{error}</div>;
   if (!vendor) return null;
 
-  const sc = STATUS_COLORS[vendor.status] || { bg: '#f3f4f6', text: '#374151' };
+  const sc = STATUS_COLORS[vendor.status] || { bg: COLORS.hoverBg, text: COLORS.textSecondary };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/vendors" style={{ color: '#3b82f6', textDecoration: 'none', fontSize: '0.875rem' }}>← Vendors</Link>
+        <Link href="/vendors" style={{ color: COLORS.accentBlue, textDecoration: 'none', fontSize: '0.875rem' }}>← Vendors</Link>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>{vendor.name}</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary }}>{vendor.name}</h1>
             <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600, background: sc.bg, color: sc.text }}>
               {vendor.status}
             </span>
           </div>
           {!editing && (
-            <button onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
+            <button onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
               Edit
             </button>
           )}
@@ -124,86 +125,90 @@ export default function VendorDetailPage() {
             <Field label="Country" value={vendor.address?.country || '—'} />
           </Section>
           {/* Purchase Orders */}
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
-            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginBottom: '0.75rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
+            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.textSecondary, marginBottom: '0.75rem' }}>
               Purchase Orders {txns ? `(${txns.purchaseOrders.length})` : ''}
             </h2>
             {!txns || txns.purchaseOrders.length === 0 ? (
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>No purchase orders</p>
+              <p style={{ fontSize: '0.875rem', color: COLORS.textMuted, margin: 0 }}>No purchase orders</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['PO Number', 'Status', 'Amount', 'Issued'].map((h) => (
-                      <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#6b7280' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {txns.purchaseOrders.map((po: any) => (
-                    <tr key={po.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '0.4rem 0.6rem' }}>
-                        <Link href={`/purchase-orders/${po.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{po.number}</Link>
-                      </td>
-                      <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: '#374151' }}>{po.status}</td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>
-                        {po.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(po.amount) : '—'}
-                      </td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{po.issuedAt ? new Date(po.issuedAt).toLocaleDateString() : '—'}</td>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ background: COLORS.tableHeaderBg, borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+                      {['PO Number', 'Status', 'Amount', 'Issued'].map((h) => (
+                        <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {txns.purchaseOrders.map((po: any) => (
+                      <tr key={po.id} style={{ borderBottom: `1px solid ${COLORS.hoverBg}` }}>
+                        <td style={{ padding: '0.4rem 0.6rem' }}>
+                          <Link href={`/purchase-orders/${po.id}`} style={{ color: COLORS.accentBlueDark, textDecoration: 'none' }}>{po.number}</Link>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: COLORS.textSecondary }}>{po.status}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: COLORS.textSecondary }}>
+                          {po.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(po.amount) : '—'}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: COLORS.textSecondary }}>{po.issuedAt ? new Date(po.issuedAt).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
           {/* Invoices */}
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
-            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginBottom: '0.75rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
+            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.textSecondary, marginBottom: '0.75rem' }}>
               Invoices {txns ? `(${txns.invoices.length})` : ''}
             </h2>
             {!txns || txns.invoices.length === 0 ? (
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>No invoices</p>
+              <p style={{ fontSize: '0.875rem', color: COLORS.textMuted, margin: 0 }}>No invoices</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['Invoice #', 'Vendor #', 'Status', 'Match', 'Amount', 'Date'].map((h) => (
-                      <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#6b7280' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {txns.invoices.map((inv: any) => (
-                    <tr key={inv.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '0.4rem 0.6rem' }}>
-                        <Link href={`/invoices/${inv.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{inv.number}</Link>
-                      </td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{inv.vendorInvoiceNumber ?? '—'}</td>
-                      <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: '#374151' }}>{inv.status}</td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: inv.matchStatus === 'exception' ? '#dc2626' : '#374151' }}>{inv.matchStatus ?? '—'}</td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>
-                        {inv.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.amount) : '—'}
-                      </td>
-                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{inv.date ? new Date(inv.date).toLocaleDateString() : '—'}</td>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ background: COLORS.tableHeaderBg, borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+                      {['Invoice #', 'Vendor #', 'Status', 'Match', 'Amount', 'Date'].map((h) => (
+                        <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {txns.invoices.map((inv: any) => (
+                      <tr key={inv.id} style={{ borderBottom: `1px solid ${COLORS.hoverBg}` }}>
+                        <td style={{ padding: '0.4rem 0.6rem' }}>
+                          <Link href={`/invoices/${inv.id}`} style={{ color: COLORS.accentBlueDark, textDecoration: 'none' }}>{inv.number}</Link>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: COLORS.textSecondary }}>{inv.vendorInvoiceNumber ?? '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: COLORS.textSecondary }}>{inv.status}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: inv.matchStatus === 'exception' ? COLORS.accentRedDark : COLORS.textSecondary }}>{inv.matchStatus ?? '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: COLORS.textSecondary }}>
+                          {inv.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.amount) : '—'}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', color: COLORS.textSecondary }}>{inv.date ? new Date(inv.date).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
           {/* Punchout */}
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', margin: '0 0 0.25rem' }}>Punchout (cXML)</h2>
-                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>
+                <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.textSecondary, margin: '0 0 0.25rem' }}>Punchout (cXML)</h2>
+                <p style={{ fontSize: '0.8rem', color: COLORS.textSecondary, margin: 0 }}>
                   Allow this vendor&apos;s catalog to be browsed via cXML PunchOut.{' '}
                   {vendor.punchoutEnabled ? (
                     <span style={{ color: '#059669', fontWeight: 600 }}>Enabled</span>
                   ) : (
-                    <span style={{ color: '#9ca3af' }}>Disabled</span>
+                    <span style={{ color: COLORS.textMuted }}>Disabled</span>
                   )}
                 </p>
               </div>
@@ -212,8 +217,8 @@ export default function VendorDetailPage() {
                 disabled={punchoutSaving}
                 style={{
                   padding: '0.4rem 1rem', border: 'none', borderRadius: '6px', cursor: punchoutSaving ? 'not-allowed' : 'pointer',
-                  background: vendor.punchoutEnabled ? '#fee2e2' : '#d1fae5',
-                  color: vendor.punchoutEnabled ? '#dc2626' : '#059669',
+                  background: vendor.punchoutEnabled ? COLORS.accentRedLight : '#d1fae5',
+                  color: vendor.punchoutEnabled ? COLORS.accentRedDark : '#059669',
                   fontWeight: 500, fontSize: '0.875rem',
                 }}
               >
@@ -229,7 +234,7 @@ export default function VendorDetailPage() {
         </div>
       ) : (
         <form onSubmit={handleSave}>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem', boxShadow: SHADOWS.card }}>
             <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Basic Info</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -252,7 +257,7 @@ export default function VendorDetailPage() {
               </div>
             </div>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem', boxShadow: SHADOWS.card }}>
             <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Contact</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div><label style={labelStyle}>Contact Name</label><input value={form.contactName} onChange={(e) => set('contactName', e.target.value)} style={inputStyle} /></div>
@@ -260,7 +265,7 @@ export default function VendorDetailPage() {
               <div><label style={labelStyle}>Phone</label><input value={form.phone} onChange={(e) => set('phone', e.target.value)} style={inputStyle} /></div>
             </div>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem' }}>
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1rem', boxShadow: SHADOWS.card }}>
             <h2 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>Address</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Street</label><input value={form.street} onChange={(e) => set('street', e.target.value)} style={inputStyle} /></div>
@@ -270,12 +275,12 @@ export default function VendorDetailPage() {
               <div><label style={labelStyle}>Country</label><input value={form.country} onChange={(e) => set('country', e.target.value)} style={inputStyle} /></div>
             </div>
           </div>
-          {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', color: '#dc2626', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
+          {error && <div style={{ background: COLORS.accentRedLight, border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', color: COLORS.accentRedDark, fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button type="submit" disabled={saving} style={{ padding: '0.625rem 1.25rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+            <button type="submit" disabled={saving} style={{ padding: '0.625rem 1.25rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
-            <button type="button" onClick={() => setEditing(false)} style={{ padding: '0.625rem 1.25rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+            <button type="button" onClick={() => setEditing(false)} style={{ padding: '0.625rem 1.25rem', background: COLORS.tableBorder, color: COLORS.textSecondary, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </div>
         </form>
       )}
@@ -285,8 +290,8 @@ export default function VendorDetailPage() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
-      <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginBottom: '0.75rem' }}>{title}</h2>
+    <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
+      <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.textSecondary, marginBottom: '0.75rem' }}>{title}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>{children}</div>
     </div>
   );
@@ -295,8 +300,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.15rem' }}>{label}</div>
-      <div style={{ fontSize: '0.875rem', color: '#111827' }}>{value}</div>
+      <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginBottom: '0.15rem' }}>{label}</div>
+      <div style={{ fontSize: '0.875rem', color: COLORS.textPrimary }}>{value}</div>
     </div>
   );
 }

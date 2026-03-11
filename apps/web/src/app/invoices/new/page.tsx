@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 interface PO {
   id: string;
@@ -169,12 +170,12 @@ export default function NewInvoicePage() {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
-  const labelStyle = { display: 'block' as const, fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' };
+  const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
+  const labelStyle = { display: 'block' as const, fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '900px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: '#111827' }}>Create Invoice</h1>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: COLORS.textPrimary }}>Create Invoice</h1>
 
       {/* OCR Upload */}
       <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
@@ -190,7 +191,7 @@ export default function NewInvoicePage() {
           type="button"
           disabled={ocrLoading}
           onClick={() => fileInputRef.current?.click()}
-          style={{ background: '#0369a1', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: ocrLoading ? 'not-allowed' : 'pointer', opacity: ocrLoading ? 0.7 : 1, whiteSpace: 'nowrap' }}
+          style={{ background: '#0369a1', color: COLORS.white, border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: ocrLoading ? 'not-allowed' : 'pointer', opacity: ocrLoading ? 0.7 : 1, whiteSpace: 'nowrap' }}
         >
           {ocrLoading ? 'Processing…' : 'Choose File'}
         </button>
@@ -198,8 +199,8 @@ export default function NewInvoicePage() {
 
       <form onSubmit={handleSubmit}>
         {/* Header */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Invoice Details</h2>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: COLORS.textPrimary }}>Invoice Details</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={labelStyle}>Link to Purchase Order (optional)</label>
@@ -229,59 +230,61 @@ export default function NewInvoicePage() {
         </div>
 
         {/* Lines */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>Line Items</h2>
-            <button type="button" onClick={addLine} style={{ fontSize: '0.8rem', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: COLORS.textPrimary }}>Line Items</h2>
+            <button type="button" onClick={addLine} style={{ fontSize: '0.8rem', color: COLORS.accentBlueDark, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
               + Add Line
             </button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                {['#', 'Description', 'Qty', 'Unit Price', 'Total', ''].map((h) => (
-                  <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem' }}>{h}</th>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${COLORS.tableBorder}`, background: COLORS.tableHeaderBg }}>
+                  {['#', 'Description', 'Qty', 'Unit Price', 'Total', ''].map((h) => (
+                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.8rem' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lines.map((line, idx) => (
+                  <tr key={idx} style={{ borderBottom: idx < lines.length - 1 ? `1px solid ${COLORS.hoverBg}` : undefined }}>
+                    <td style={{ padding: '0.5rem 0.75rem', color: COLORS.textSecondary, width: '40px' }}>{idx + 1}</td>
+                    <td style={{ padding: '0.5rem 0.75rem' }}>
+                      <input value={line.description} onChange={(e) => updateLine(idx, 'description', e.target.value)} required style={{ ...inputStyle, width: '100%' }} />
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', width: '80px' }}>
+                      <input type="number" min="0" step="0.01" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} required style={{ ...inputStyle, width: '80px' }} />
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', width: '100px' }}>
+                      <input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)} required style={{ ...inputStyle, width: '100px' }} />
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', color: COLORS.textSecondary, width: '90px' }}>
+                      ${(parseFloat(line.quantity || '0') * parseFloat(line.unitPrice || '0')).toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', width: '30px' }}>
+                      <button type="button" onClick={() => removeLine(idx)} style={{ color: COLORS.accentRed, background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>×</button>
+                    </td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((line, idx) => (
-                <tr key={idx} style={{ borderBottom: idx < lines.length - 1 ? '1px solid #f3f4f6' : undefined }}>
-                  <td style={{ padding: '0.5rem 0.75rem', color: '#6b7280', width: '40px' }}>{idx + 1}</td>
-                  <td style={{ padding: '0.5rem 0.75rem' }}>
-                    <input value={line.description} onChange={(e) => updateLine(idx, 'description', e.target.value)} required style={{ ...inputStyle, width: '100%' }} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.75rem', width: '80px' }}>
-                    <input type="number" min="0" step="0.01" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} required style={{ ...inputStyle, width: '80px' }} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.75rem', width: '100px' }}>
-                    <input type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => updateLine(idx, 'unitPrice', e.target.value)} required style={{ ...inputStyle, width: '100px' }} />
-                  </td>
-                  <td style={{ padding: '0.5rem 0.75rem', color: '#374151', width: '90px' }}>
-                    ${(parseFloat(line.quantity || '0') * parseFloat(line.unitPrice || '0')).toFixed(2)}
-                  </td>
-                  <td style={{ padding: '0.5rem 0.75rem', width: '30px' }}>
-                    <button type="button" onClick={() => removeLine(idx)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>×</button>
+                {lines.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding: '1rem', textAlign: 'center', color: COLORS.textMuted }}>No lines. Add a line or select a PO above.</td></tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr style={{ borderTop: `2px solid ${COLORS.tableBorder}` }}>
+                  <td colSpan={4} style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: COLORS.textSecondary }}>Total</td>
+                  <td colSpan={2} style={{ padding: '0.75rem', fontWeight: 700, color: COLORS.textPrimary }}>
+                    ${subtotal.toFixed(2)}
                   </td>
                 </tr>
-              ))}
-              {lines.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af' }}>No lines. Add a line or select a PO above.</td></tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr style={{ borderTop: '2px solid #e5e7eb' }}>
-                <td colSpan={4} style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 600, color: '#374151' }}>Total</td>
-                <td colSpan={2} style={{ padding: '0.75rem', fontWeight: 700, color: '#111827' }}>
-                  ${subtotal.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </div>
         </div>
 
         {error && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#991b1b', fontSize: '0.875rem' }}>
+          <div style={{ background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1rem', color: COLORS.accentRedDark, fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
@@ -290,11 +293,11 @@ export default function NewInvoicePage() {
           <button
             type="submit"
             disabled={loading || !invoiceNumber || lines.length === 0}
-            style={{ background: loading ? '#9ca3af' : '#111827', color: '#fff', padding: '0.625rem 1.5rem', borderRadius: '6px', border: 'none', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
+            style={{ background: loading ? COLORS.textMuted : COLORS.textPrimary, color: COLORS.white, padding: '0.625rem 1.5rem', borderRadius: '6px', border: 'none', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
           >
             {loading ? 'Creating...' : 'Create Invoice'}
           </button>
-          <a href="/invoices" style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', color: '#374151', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+          <a href="/invoices" style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: `1px solid ${COLORS.inputBorder}`, fontSize: '0.875rem', color: COLORS.textSecondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
             Cancel
           </a>
         </div>

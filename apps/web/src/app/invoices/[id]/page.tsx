@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
+import { COLORS, SHADOWS } from '../../../lib/theme';
 
 interface MatchResult {
   id: string;
@@ -43,20 +44,20 @@ interface Invoice {
 }
 
 const STATUS_COLORS: Record<string, { background: string; color: string }> = {
-  pending_match: { background: '#fef3c7', color: '#92400e' },
-  matched: { background: '#d1fae5', color: '#065f46' },
+  pending_match: { background: COLORS.accentAmberLight, color: COLORS.accentAmberDark },
+  matched: { background: COLORS.accentGreenLight, color: COLORS.accentGreenDark },
   partial_match: { background: '#dbeafe', color: '#1e40af' },
-  exception: { background: '#fee2e2', color: '#991b1b' },
-  approved: { background: '#ede9fe', color: '#5b21b6' },
-  paid: { background: '#d1fae5', color: '#064e3b' },
+  exception: { background: COLORS.accentRedLight, color: COLORS.accentRedDark },
+  approved: { background: COLORS.accentPurpleLight, color: COLORS.accentPurpleDark },
+  paid: { background: COLORS.accentGreenLight, color: '#064e3b' },
 };
 
 const MATCH_COLORS: Record<string, { background: string; color: string }> = {
-  unmatched: { background: '#f3f4f6', color: '#374151' },
-  full_match: { background: '#d1fae5', color: '#065f46' },
+  unmatched: { background: COLORS.hoverBg, color: COLORS.textSecondary },
+  full_match: { background: COLORS.accentGreenLight, color: COLORS.accentGreenDark },
   partial_match: { background: '#dbeafe', color: '#1e40af' },
-  exception: { background: '#fee2e2', color: '#991b1b' },
-  match: { background: '#d1fae5', color: '#065f46' },
+  exception: { background: COLORS.accentRedLight, color: COLORS.accentRedDark },
+  match: { background: COLORS.accentGreenLight, color: COLORS.accentGreenDark },
   within_tolerance: { background: '#dbeafe', color: '#1e40af' },
 };
 
@@ -71,8 +72,8 @@ function Badge({ label, colors }: { label: string; colors: { background: string;
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</div>
-      <div style={{ fontSize: '0.9rem', color: '#111827' }}>{value ?? '—'}</div>
+      <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '0.9rem', color: COLORS.textPrimary }}>{value ?? '—'}</div>
     </div>
   );
 }
@@ -157,10 +158,10 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  if (loading) return <div style={{ padding: '2rem', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>;
+  if (loading) return <div style={{ padding: '2rem', color: COLORS.textMuted, fontSize: '0.875rem' }}>Loading…</div>;
   if (!invoice) return (
-    <div style={{ padding: '2rem', color: '#6b7280' }}>
-      Invoice not found. <Link href="/invoices" style={{ color: '#2563eb' }}>Back to list</Link>
+    <div style={{ padding: '2rem', color: COLORS.textSecondary }}>
+      Invoice not found. <Link href="/invoices" style={{ color: COLORS.accentBlueDark }}>Back to list</Link>
     </div>
   );
 
@@ -170,30 +171,30 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     <div style={{ padding: '2rem', maxWidth: '1000px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-            <Link href="/invoices" style={{ color: '#6b7280', textDecoration: 'none' }}>Invoices</Link> / {invoice.internalNumber}
+          <div style={{ fontSize: '0.875rem', color: COLORS.textSecondary, marginBottom: '0.25rem' }}>
+            <Link href="/invoices" style={{ color: COLORS.textSecondary, textDecoration: 'none' }}>Invoices</Link> / {invoice.internalNumber}
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>{invoice.internalNumber}</h1>
-          <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>Vendor invoice: {invoice.invoiceNumber}</div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: COLORS.textPrimary }}>{invoice.internalNumber}</h1>
+          <div style={{ fontSize: '0.875rem', color: COLORS.textSecondary, marginTop: '0.25rem' }}>Vendor invoice: {invoice.invoiceNumber}</div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <Badge label={invoice.status} colors={STATUS_COLORS[invoice.status] ?? { background: '#f3f4f6', color: '#374151' }} />
+          <Badge label={invoice.status} colors={STATUS_COLORS[invoice.status] ?? { background: COLORS.hoverBg, color: COLORS.textSecondary }} />
           <Badge label={`Match: ${invoice.matchStatus}`} colors={MATCH_COLORS[invoice.matchStatus] ?? MATCH_COLORS.unmatched} />
         </div>
       </div>
 
       {hasExceptions && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '8px', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.25rem' }}>⚠️</span>
           <div>
-            <div style={{ fontWeight: 600, color: '#991b1b', fontSize: '0.875rem' }}>3-Way Match Exceptions Detected</div>
+            <div style={{ fontWeight: 600, color: COLORS.accentRedDark, fontSize: '0.875rem' }}>3-Way Match Exceptions Detected</div>
             <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '0.25rem' }}>One or more lines have price or quantity variances outside tolerance. Finance review required before approval.</div>
           </div>
         </div>
       )}
 
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Invoice Details</h2>
+      <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: COLORS.textPrimary }}>Invoice Details</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
           <Field label="Vendor" value={invoice.vendor?.name ?? null} />
           <Field label="Linked PO" value={invoice.purchaseOrder?.number ?? null} />
@@ -205,52 +206,54 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.5rem' }}>
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>Line Items & 3-Way Match</h2>
+      <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', overflow: 'hidden', marginBottom: '1.5rem', boxShadow: SHADOWS.card }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: COLORS.textPrimary }}>Line Items & 3-Way Match</h2>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-          <thead>
-            <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-              {['#', 'Description', 'Qty', 'Unit Price', 'Total', 'Price ✓', 'Qty ✓', 'Variance %', 'Match Status'].map((h) => (
-                <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: '#374151', fontSize: '0.8rem' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.lines.map((line, idx) => {
-              const match = line.matchResults?.[0];
-              const rowBg = match?.status === 'exception' ? '#fff7f7' : match?.status === 'match' ? '#f7fef9' : 'transparent';
-              return (
-                <tr key={line.id} style={{ borderBottom: idx < invoice.lines.length - 1 ? '1px solid #f3f4f6' : undefined, background: rowBg }}>
-                  <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{line.lineNumber}</td>
-                  <td style={{ padding: '0.875rem 1rem' }}>
-                    <div>{line.description}</div>
-                    {line.poLine && <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>PO: {line.poLine.description} @ ${line.poLine.unitPrice}</div>}
-                  </td>
-                  <td style={{ padding: '0.875rem 1rem' }}>{line.quantity}</td>
-                  <td style={{ padding: '0.875rem 1rem' }}>{formatCurrency(line.unitPrice, invoice.currency)}</td>
-                  <td style={{ padding: '0.875rem 1rem', fontWeight: 500 }}>{formatCurrency(line.totalPrice, invoice.currency)}</td>
-                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.priceMatch ? <span style={{ color: '#065f46', fontWeight: 700 }}>✓</span> : <span style={{ color: '#991b1b', fontWeight: 700 }}>✗</span>) : '—'}</td>
-                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.quantityMatch ? <span style={{ color: '#065f46', fontWeight: 700 }}>✓</span> : <span style={{ color: '#991b1b', fontWeight: 700 }}>✗</span>) : '—'}</td>
-                  <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{match ? `${parseFloat(match.variancePct).toFixed(1)}%` : '—'}</td>
-                  <td style={{ padding: '0.875rem 1rem' }}>{match ? <Badge label={match.status} colors={MATCH_COLORS[match.status] ?? MATCH_COLORS.unmatched} /> : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: COLORS.tableHeaderBg, borderBottom: `1px solid ${COLORS.tableBorder}` }}>
+                {['#', 'Description', 'Qty', 'Unit Price', 'Total', 'Price ✓', 'Qty ✓', 'Variance %', 'Match Status'].map((h) => (
+                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 600, color: COLORS.textSecondary, fontSize: '0.8rem' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {invoice.lines.map((line, idx) => {
+                const match = line.matchResults?.[0];
+                const rowBg = match?.status === 'exception' ? '#fff7f7' : match?.status === 'match' ? '#f7fef9' : 'transparent';
+                return (
+                  <tr key={line.id} style={{ borderBottom: idx < invoice.lines.length - 1 ? `1px solid ${COLORS.hoverBg}` : undefined, background: rowBg }}>
+                    <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>{line.lineNumber}</td>
+                    <td style={{ padding: '0.875rem 1rem' }}>
+                      <div>{line.description}</div>
+                      {line.poLine && <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.125rem' }}>PO: {line.poLine.description} @ ${line.poLine.unitPrice}</div>}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem' }}>{line.quantity}</td>
+                    <td style={{ padding: '0.875rem 1rem' }}>{formatCurrency(line.unitPrice, invoice.currency)}</td>
+                    <td style={{ padding: '0.875rem 1rem', fontWeight: 500 }}>{formatCurrency(line.totalPrice, invoice.currency)}</td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.priceMatch ? <span style={{ color: COLORS.accentGreenDark, fontWeight: 700 }}>✓</span> : <span style={{ color: COLORS.accentRedDark, fontWeight: 700 }}>✗</span>) : '—'}</td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.quantityMatch ? <span style={{ color: COLORS.accentGreenDark, fontWeight: 700 }}>✓</span> : <span style={{ color: COLORS.accentRedDark, fontWeight: 700 }}>✗</span>) : '—'}</td>
+                    <td style={{ padding: '0.875rem 1rem', color: COLORS.textSecondary }}>{match ? `${parseFloat(match.variancePct).toFixed(1)}%` : '—'}</td>
+                    <td style={{ padding: '0.875rem 1rem' }}>{match ? <Badge label={match.status} colors={MATCH_COLORS[match.status] ?? MATCH_COLORS.unmatched} /> : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
         {!['approved', 'paid'].includes(invoice.status) && (
           <>
             <button onClick={doApprove} disabled={hasExceptions || actionLoading !== null}
-              style={{ background: hasExceptions ? '#d1d5db' : '#111827', color: '#fff', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: hasExceptions || actionLoading ? 'not-allowed' : 'pointer', opacity: hasExceptions ? 0.5 : 1 }}>
+              style={{ background: hasExceptions ? COLORS.inputBorder : COLORS.textPrimary, color: COLORS.white, border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: hasExceptions || actionLoading ? 'not-allowed' : 'pointer', opacity: hasExceptions ? 0.5 : 1 }}>
               {actionLoading === 'approve' ? 'Approving…' : 'Approve for Payment'}
             </button>
             <button onClick={doRerunMatch} disabled={actionLoading !== null}
-              style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', color: '#374151', background: '#fff', cursor: actionLoading ? 'not-allowed' : 'pointer' }}>
+              style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: `1px solid ${COLORS.inputBorder}`, fontSize: '0.875rem', color: COLORS.textSecondary, background: COLORS.white, cursor: actionLoading ? 'not-allowed' : 'pointer' }}>
               {actionLoading === 'match' ? 'Running…' : 'Re-run Match'}
             </button>
           </>
@@ -258,15 +261,15 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         {invoice.status === 'approved' && (
           <>
             <button onClick={doMarkPaid} disabled={actionLoading !== null}
-              style={{ background: '#059669', color: '#fff', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+              style={{ background: '#059669', color: COLORS.white, border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
               {actionLoading === 'paid' ? 'Marking…' : 'Mark as Paid'}
             </button>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.375rem 0.75rem' }}>
-              <span style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 500 }}>Export to GL:</span>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: COLORS.white, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '6px', padding: '0.375rem 0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: COLORS.textSecondary, fontWeight: 500 }}>Export to GL:</span>
               <select
                 value={glSystem}
                 onChange={(e) => setGlSystem(e.target.value as 'qbo' | 'xero')}
-                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.8rem' }}
+                style={{ padding: '0.25rem 0.5rem', border: `1px solid ${COLORS.inputBorder}`, borderRadius: '4px', fontSize: '0.8rem' }}
               >
                 <option value="qbo">QuickBooks Online</option>
                 <option value="xero">Xero</option>
@@ -274,7 +277,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               <button
                 onClick={doGlExport}
                 disabled={actionLoading !== null}
-                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '0.375rem 0.875rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500, cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+                style={{ background: COLORS.accentBlueDark, color: COLORS.white, border: 'none', padding: '0.375rem 0.875rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500, cursor: actionLoading ? 'not-allowed' : 'pointer' }}
               >
                 {actionLoading === 'gl' ? 'Exporting…' : 'Export'}
               </button>
@@ -282,8 +285,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </>
         )}
       </div>
-      {successMsg && <div style={{ marginTop: '0.75rem', background: '#d1fae5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '0.625rem 1rem', color: '#065f46', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>{successMsg}<button onClick={() => setSuccessMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontWeight: 700 }}>×</button></div>}
-      {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
+      {successMsg && <div style={{ marginTop: '0.75rem', background: COLORS.accentGreenLight, border: '1px solid #a7f3d0', borderRadius: '6px', padding: '0.625rem 1rem', color: COLORS.accentGreenDark, fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>{successMsg}<button onClick={() => setSuccessMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.accentGreenDark, fontWeight: 700 }}>×</button></div>}
+      {error && <div style={{ marginTop: '0.75rem', background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: COLORS.accentRedDark, fontSize: '0.875rem' }}>{error}</div>}
     </div>
   );
 }
