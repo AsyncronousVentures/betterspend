@@ -17,6 +17,8 @@ export default function GlExportJobsPage() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const [retryResult, setRetryResult] = useState<{ id: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     api.glExportJobs.list()
@@ -24,6 +26,21 @@ export default function GlExportJobsPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleRetry(e: React.MouseEvent, jobId: string) {
+    e.stopPropagation();
+    setRetrying(jobId);
+    setRetryResult(null);
+    try {
+      await api.glExportJobs.retry(jobId);
+      setRetryResult({ id: jobId, ok: true });
+      setTimeout(refresh, 1500);
+    } catch {
+      setRetryResult({ id: jobId, ok: false });
+    } finally {
+      setRetrying(null);
+    }
+  }
 
   function refresh() {
     setLoading(true);
@@ -87,7 +104,16 @@ export default function GlExportJobsPage() {
                       <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.8rem' }}>{new Date(job.createdAt).toLocaleString()}</td>
                       <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.8rem' }}>{job.completedAt ? new Date(job.completedAt).toLocaleString() : '—'}</td>
                       <td style={{ padding: '0.875rem 1rem', color: '#374151', textAlign: 'center' }}>{job.attempts ?? 0}</td>
-                      <td style={{ padding: '0.875rem 1rem', color: '#9ca3af', fontSize: '0.8rem' }}>
+                                      <td style={{ padding: '0.875rem 1rem', color: '#9ca3af', fontSize: '0.8rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        {job.status === 'failed' && (
+                          <button
+                            onClick={(e) => handleRetry(e, job.id)}
+                            disabled={retrying === job.id}
+                            style={{ padding: '0.2rem 0.6rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: retrying === job.id ? 'not-allowed' : 'pointer', opacity: retrying === job.id ? 0.6 : 1 }}
+                          >
+                            {retrying === job.id ? '…' : retryResult?.id === job.id ? (retryResult?.ok ? 'Queued!' : 'Failed') : 'Retry'}
+                          </button>
+                        )}
                         {hasError && <span>{isExpanded ? '▲' : '▼'}</span>}
                       </td>
                     </tr>

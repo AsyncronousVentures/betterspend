@@ -62,6 +62,13 @@ export class GlController {
     return this.glExportService.findJobsForInvoice(invoiceId);
   }
 
+  @Post('export-jobs/:id/retry')
+  @ApiOperation({ summary: 'Retry a failed GL export job' })
+  retryJob(@Param('id') id: string, @CurrentOrgId() orgId: string) {
+    this.glExportService.retryJob(id, orgId).catch(() => {});
+    return { queued: true };
+  }
+
   @Post('export-jobs/trigger/:invoiceId')
   @ApiOperation({ summary: 'Manually trigger GL export for an approved invoice' })
   @ApiQuery({ name: 'targetSystem', required: true, enum: ['qbo', 'xero'] })

@@ -158,6 +158,19 @@ export class InvoicesService {
     return updated;
   }
 
+  async bulkApprove(ids: string[], organizationId: string, approverId: string) {
+    const results: Array<{ id: string; success: boolean; error?: string }> = [];
+    for (const id of ids) {
+      try {
+        await this.approve(id, organizationId, approverId);
+        results.push({ id, success: true });
+      } catch (err: any) {
+        results.push({ id, success: false, error: err.message });
+      }
+    }
+    return results;
+  }
+
   async approve(id: string, organizationId: string, approverId: string) {
     const invoice = await this.findOne(id, organizationId);
     if (invoice.matchStatus === 'exception') {

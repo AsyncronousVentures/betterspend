@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { InvoicesService, CreateInvoiceInput } from './invoices.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
@@ -38,6 +38,12 @@ export class InvoicesController {
   @ApiOperation({ summary: 'Approve a matched invoice for payment' })
   approve(@Param('id') id: string, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
     return this.invoicesService.approve(id, orgId, userId);
+  }
+
+  @Post('bulk-approve')
+  @ApiOperation({ summary: 'Bulk approve multiple matched invoices' })
+  bulkApprove(@Body() body: { ids: string[] }, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
+    return this.invoicesService.bulkApprove(body.ids, orgId, userId);
   }
 
   @Patch(':id/mark-paid')

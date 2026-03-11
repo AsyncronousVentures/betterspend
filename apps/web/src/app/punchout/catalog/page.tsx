@@ -31,6 +31,7 @@ export default function PunchoutCatalogPage() {
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutResult, setCheckoutResult] = useState<any | null>(null);
+  const [checkoutError, setCheckoutError] = useState('');
   const [searchQ, setSearchQ] = useState('');
 
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function PunchoutCatalogPage() {
       const result = await api.punchout.orderReturn(session, orderMessage);
       setCheckoutResult(result);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Checkout failed');
+      setCheckoutError(err instanceof Error ? err.message : 'Checkout failed');
     } finally {
       setCheckingOut(false);
     }
@@ -163,6 +164,12 @@ export default function PunchoutCatalogPage() {
         </div>
       </div>
 
+      {checkoutError && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', padding: '0.75rem 1.5rem', color: '#991b1b', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {checkoutError}
+          <button onClick={() => setCheckoutError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontWeight: 700 }}>×</button>
+        </div>
+      )}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem 2rem', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
         {/* Main catalog */}
         <div>

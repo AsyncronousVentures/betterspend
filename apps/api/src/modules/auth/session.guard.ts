@@ -11,7 +11,7 @@ import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
 import { AUTH_INSTANCE } from './auth.tokens';
 import type { AuthInstance, AuthUser } from '../../auth/auth.instance';
 import { DB_TOKEN } from '../../database/database.module';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import * as schema from '@betterspend/db';
 
 // Extend Express Request to carry our user type
@@ -45,43 +45,48 @@ export class SessionGuard implements CanActivate {
     // No token — allow through in demo/dev mode (@CurrentOrgId falls back to demo IDs)
     if (!token) return true;
 
-    // Token present — validate with better-auth
-    const headers = this.buildHeaders(req);
-    const sessionData = await this.auth.api.getSession({ headers });
+    // Validate the Bearer token directly against the DB.
+    // better-auth's getSession only reads its own cookie format, not Bearer tokens,
+    // so we query authSessions directly to avoid that limitation.
+    const db = this.db as any;
 
-    if (!sessionData) {
+    const [session] = await db
+      .select()
+      .from(schema.authSessions)
+      .where(
+        and(
+          eq(schema.authSessions.token, token),
+          gt(schema.authSessions.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+
+    if (!session) {
       throw new UnauthorizedException('Invalid or expired session token');
     }
 
-    // Load roles and attach session user to request
-    const roles = await (this.db as any)
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, session.userId))
+      .limit(1);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const roles = await db
       .select()
       .from(schema.userRoles)
-      .where(eq(schema.userRoles.userId, sessionData.user.id));
+      .where(eq(schema.userRoles.userId, user.id));
 
-    req.authUser = { ...sessionData.user, roles };
+    req.authUser = { ...user, roles };
     return true;
   }
 
   private extractToken(req: Request): string | null {
     const auth = req.headers['authorization'];
     if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7);
-    // Also detect better-auth cookie-based sessions
-    const cookies = req.headers['cookie'];
-    if (typeof cookies === 'string' && cookies.includes('better-auth.session_token')) return 'cookie';
     return null;
-  }
-
-  private buildHeaders(req: Request): Headers {
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (value === undefined) continue;
-      if (Array.isArray(value)) {
-        value.forEach((v) => headers.append(key, v));
-      } else {
-        headers.set(key, value);
-      }
-    }
-    return headers;
   }
 }

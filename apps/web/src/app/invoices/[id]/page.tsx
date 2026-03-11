@@ -88,6 +88,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [glSystem, setGlSystem] = useState<'qbo' | 'xero'>('qbo');
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
     try {
       await api.glExportJobs.trigger(id, glSystem);
       setError('');
-      alert(`GL export job queued for ${glSystem === 'qbo' ? 'QuickBooks Online' : 'Xero'}. Check GL Integration → Export Jobs for status.`);
+      setSuccessMsg(`GL export job queued for ${glSystem === 'qbo' ? 'QuickBooks Online' : 'Xero'}. Check GL Integration → Export Jobs for status.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'GL export failed');
     } finally {
@@ -281,6 +282,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </>
         )}
       </div>
+      {successMsg && <div style={{ marginTop: '0.75rem', background: '#d1fae5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '0.625rem 1rem', color: '#065f46', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>{successMsg}<button onClick={() => setSuccessMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontWeight: 700 }}>×</button></div>}
       {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
     </div>
   );

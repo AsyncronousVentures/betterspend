@@ -73,7 +73,7 @@ export default function VendorDetailPage() {
       const updated = await api.vendors.update(id, { punchoutEnabled: !vendor.punchoutEnabled });
       setVendor(updated);
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setPunchoutSaving(false);
     }

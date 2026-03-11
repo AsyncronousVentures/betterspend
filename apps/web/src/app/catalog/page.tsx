@@ -52,6 +52,7 @@ export default function CatalogPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,9 +85,9 @@ export default function CatalogPage() {
     try {
       if (editId) await api.catalog.update(editId, body);
       else await api.catalog.create(body);
-      setShowForm(false); setEditId(null); setForm(EMPTY_FORM); await load();
+      setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setFormError(''); await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Save failed');
+      setFormError(err instanceof Error ? err.message : 'Save failed');
     }
     setSaving(false);
   }
@@ -175,10 +176,11 @@ export default function CatalogPage() {
                 <input style={inputStyle} value={form.currency} maxLength={3} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })} />
               </div>
             </div>
+            {formError && <div style={{ marginBottom: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{formError}</div>}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button type="submit" style={btnPrimary} disabled={saving}>{saving ? 'Saving…' : editId ? 'Update Item' : 'Create Item'}</button>
               <button type="button" style={{ ...btnPrimary, background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}
-                onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); }}>Cancel</button>
+                onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setFormError(''); }}>Cancel</button>
             </div>
           </form>
         </div>

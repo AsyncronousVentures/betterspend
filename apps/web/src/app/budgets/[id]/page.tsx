@@ -29,6 +29,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const [addPeriodOpen, setAddPeriodOpen] = useState(false);
   const [periodForm, setPeriodForm] = useState({ periodStart: '', periodEnd: '', allocatedAmount: '' });
   const [periodSaving, setPeriodSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     params.then(({ id: pid }) => {
@@ -53,7 +54,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       setBudget(updated);
       setEditing(false);
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setSaving(false);
     }
@@ -71,7 +72,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       setBudget(updated);
       setAddPeriodOpen(false);
       setPeriodForm({ periodStart: '', periodEnd: '', allocatedAmount: '' });
-    } catch (e: any) { alert(e.message); } finally { setPeriodSaving(false); }
+    } catch (e: any) { setError(e.message); } finally { setPeriodSaving(false); }
   }
 
   async function handleRemovePeriod(periodId: string) {
@@ -79,7 +80,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     try {
       const updated = await api.budgets.removePeriod(id, periodId);
       setBudget(updated);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { setError(e.message); }
   }
 
   if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>Loading…</div>;
@@ -92,6 +93,12 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div style={{ padding: '2rem', maxWidth: '800px' }}>
+      {error && (
+        <div style={{ marginBottom: '1rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>
+          {error}
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontWeight: 700 }}>×</button>
+        </div>
+      )}
       <Link href="/budgets" style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}>
         &larr; Back to Budgets
       </Link>
