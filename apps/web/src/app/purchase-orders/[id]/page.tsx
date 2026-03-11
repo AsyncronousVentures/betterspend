@@ -28,6 +28,19 @@ interface BlanketRelease {
   createdAt: string;
 }
 
+interface ReceivingLine {
+  poLineId: string;
+  lineNumber: string;
+  description: string;
+  orderedQty: string;
+  uom: string;
+  receivedQty: string;
+  rejectedQty: string;
+  outstandingQty: string;
+  receivedPct: string;
+  grnCount: number;
+}
+
 interface PurchaseOrder {
   id: string;
   number: string;
@@ -82,6 +95,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
   const [changeError, setChangeError] = useState('');
   const [changeSubmitting, setChangeSubmitting] = useState(false);
   const [releases, setReleases] = useState<BlanketRelease[]>([]);
+  const [receivingLines, setReceivingLines] = useState<ReceivingLine[]>([]);
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [releaseAmount, setReleaseAmount] = useState('');
   const [releaseDesc, setReleaseDesc] = useState('');
@@ -97,6 +111,8 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
           if (data.poType === 'blanket') {
             api.purchaseOrders.releases(pid).then(setReleases).catch(() => {});
           }
+          // Always fetch receiving summary for progress tracking
+          api.purchaseOrders.receivingSummary(pid).then(setReceivingLines).catch(() => {});
         })
         .catch(() => setPo(null))
         .finally(() => setLoading(false));
@@ -364,6 +380,50 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
           </table>
         )}
       </div>
+
+      {/* Receiving Progress */}
+      {receivingLines.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.25rem' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
+            <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#111827' }}>Receiving Progress</h2>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['#', 'Description', 'Ordered', 'Received', 'Rejected', 'Outstanding', 'Progress'].map((col) => (
+                  <th key={col} style={{ padding: '0.625rem 1rem', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {receivingLines.map((line, idx) => {
+                const pct = Math.min(100, parseFloat(line.receivedPct ?? '0'));
+                const barColor = pct >= 100 ? '#059669' : pct >= 50 ? '#3b82f6' : '#f59e0b';
+                return (
+                  <tr key={line.poLineId} style={{ borderBottom: idx < receivingLines.length - 1 ? '1px solid #f3f4f6' : undefined }}>
+                    <td style={{ padding: '0.75rem 1rem', color: '#9ca3af', width: '2rem' }}>{line.lineNumber}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#374151' }}>{line.description}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#374151' }}>{Number(line.orderedQty)} {line.uom}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#065f46', fontWeight: 600 }}>{Number(line.receivedQty)}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: parseFloat(line.rejectedQty) > 0 ? '#991b1b' : '#9ca3af' }}>{Number(line.rejectedQty)}</td>
+                    <td style={{ padding: '0.75rem 1rem', color: parseFloat(line.outstandingQty) > 0 ? '#92400e' : '#9ca3af', fontWeight: parseFloat(line.outstandingQty) > 0 ? 600 : 400 }}>
+                      {Number(line.outstandingQty)}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', minWidth: '120px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '3px', transition: 'width 0.3s' }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#6b7280', whiteSpace: 'nowrap' }}>{pct.toFixed(0)}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Blanket Releases */}
       {isBlanket && (

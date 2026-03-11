@@ -147,7 +147,7 @@ export class AnalyticsService {
 
   /** Items requiring action */
   async pendingItems(organizationId: string) {
-    const [approvalRow, invoiceRow, reqRow, grnRow] = await Promise.all([
+    const [approvalRow, invoiceRow, reqRow, grnRow, overdueRow] = await Promise.all([
       this.db.execute(sql`
         SELECT COUNT(ar.id)::int AS count
         FROM approval_requests ar
@@ -179,6 +179,13 @@ export class AnalyticsService {
             WHERE gr.purchase_order_id = po.id
           )
       `),
+      this.db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM invoices
+        WHERE organization_id = ${organizationId}
+          AND status NOT IN ('approved', 'paid', 'cancelled')
+          AND due_date IS NOT NULL
+          AND due_date < NOW()
+      `),
     ]);
 
     const pendingApprovals = (approvalRow as any[]).reduce((sum: number, r: any) => sum + Number(r.count ?? 0), 0);
@@ -188,6 +195,7 @@ export class AnalyticsService {
       invoiceExceptions: Number((invoiceRow as any[])[0]?.count ?? 0),
       requisitionsPendingApproval: Number((reqRow as any[])[0]?.count ?? 0),
       posAwaitingReceipt: Number((grnRow as any[])[0]?.count ?? 0),
+      overdueInvoices: Number((overdueRow as any[])[0]?.count ?? 0),
     };
   }
 

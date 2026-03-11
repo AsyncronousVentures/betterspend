@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
@@ -311,5 +311,32 @@ export class PurchaseOrdersService {
     }
 
     return updated;
+  }
+
+  async getReceivingSummary(id: string, organizationId: string) {
+    await this.findOne(id, organizationId); // validate access
+    const rows = await this.db.execute(sql`
+      SELECT
+        pl.id                                                            AS "poLineId",
+        pl.line_number                                                   AS "lineNumber",
+        pl.description,
+        pl.quantity::numeric                                             AS "orderedQty",
+        pl.unit_of_measure                                              AS "uom",
+        COALESCE(SUM(grl.quantity_received::numeric), 0)::numeric       AS "receivedQty",
+        COALESCE(SUM(grl.quantity_rejected::numeric), 0)::numeric       AS "rejectedQty",
+        (pl.quantity::numeric - COALESCE(SUM(grl.quantity_received::numeric), 0))::numeric AS "outstandingQty",
+        CASE
+          WHEN pl.quantity::numeric = 0 THEN 0
+          ELSE ROUND(COALESCE(SUM(grl.quantity_received::numeric), 0) / pl.quantity::numeric * 100, 1)
+        END                                                              AS "receivedPct",
+        COUNT(DISTINCT gr.id)::int                                       AS "grnCount"
+      FROM po_lines pl
+      LEFT JOIN goods_receipt_lines grl ON grl.po_line_id = pl.id
+      LEFT JOIN goods_receipts gr ON gr.id = grl.goods_receipt_id AND gr.status != 'cancelled'
+      WHERE pl.purchase_order_id = ${id}
+      GROUP BY pl.id, pl.line_number, pl.description, pl.quantity, pl.unit_of_measure
+      ORDER BY pl.line_number ASC
+    `);
+    return rows;
   }
 }

@@ -13,6 +13,7 @@ export type WebhookEventType =
   | 'invoice.matched'
   | 'invoice.exception'
   | 'invoice.approved'
+  | 'invoice.paid'
   | 'approval.requested'
   | 'approval.approved'
   | 'approval.rejected';

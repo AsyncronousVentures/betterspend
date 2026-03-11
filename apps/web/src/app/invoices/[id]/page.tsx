@@ -48,6 +48,7 @@ const STATUS_COLORS: Record<string, { background: string; color: string }> = {
   partial_match: { background: '#dbeafe', color: '#1e40af' },
   exception: { background: '#fee2e2', color: '#991b1b' },
   approved: { background: '#ede9fe', color: '#5b21b6' },
+  paid: { background: '#d1fae5', color: '#064e3b' },
 };
 
 const MATCH_COLORS: Record<string, { background: string; color: string }> = {
@@ -108,6 +109,20 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       setInvoice(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approve failed');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function doMarkPaid() {
+    setError('');
+    setActionLoading('paid');
+    try {
+      await api.invoices.markPaid(id);
+      const updated = await api.invoices.get(id);
+      setInvoice(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mark paid failed');
     } finally {
       setActionLoading(null);
     }
@@ -227,7 +242,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        {invoice.status !== 'approved' && (
+        {!['approved', 'paid'].includes(invoice.status) && (
           <>
             <button onClick={doApprove} disabled={hasExceptions || actionLoading !== null}
               style={{ background: hasExceptions ? '#d1d5db' : '#111827', color: '#fff', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: hasExceptions || actionLoading ? 'not-allowed' : 'pointer', opacity: hasExceptions ? 0.5 : 1 }}>
@@ -240,24 +255,30 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
           </>
         )}
         {invoice.status === 'approved' && (
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.375rem 0.75rem' }}>
-            <span style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 500 }}>Export to GL:</span>
-            <select
-              value={glSystem}
-              onChange={(e) => setGlSystem(e.target.value as 'qbo' | 'xero')}
-              style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.8rem' }}
-            >
-              <option value="qbo">QuickBooks Online</option>
-              <option value="xero">Xero</option>
-            </select>
-            <button
-              onClick={doGlExport}
-              disabled={actionLoading !== null}
-              style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '0.375rem 0.875rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500, cursor: actionLoading ? 'not-allowed' : 'pointer' }}
-            >
-              {actionLoading === 'gl' ? 'Exporting…' : 'Export'}
+          <>
+            <button onClick={doMarkPaid} disabled={actionLoading !== null}
+              style={{ background: '#059669', color: '#fff', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+              {actionLoading === 'paid' ? 'Marking…' : 'Mark as Paid'}
             </button>
-          </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.375rem 0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 500 }}>Export to GL:</span>
+              <select
+                value={glSystem}
+                onChange={(e) => setGlSystem(e.target.value as 'qbo' | 'xero')}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.8rem' }}
+              >
+                <option value="qbo">QuickBooks Online</option>
+                <option value="xero">Xero</option>
+              </select>
+              <button
+                onClick={doGlExport}
+                disabled={actionLoading !== null}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '0.375rem 0.875rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 500, cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+              >
+                {actionLoading === 'gl' ? 'Exporting…' : 'Export'}
+              </button>
+            </div>
+          </>
         )}
       </div>
       {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}

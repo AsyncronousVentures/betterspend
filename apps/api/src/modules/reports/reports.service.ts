@@ -147,6 +147,33 @@ export class ReportsService {
     return toCsv(rows as Record<string, unknown>[]);
   }
 
+  async exportApAging(organizationId: string): Promise<string> {
+    const rows = await this.db.execute(sql`
+      SELECT
+        i.internal_number      AS "Invoice Number",
+        i.invoice_number       AS "Vendor Invoice #",
+        v.name                 AS "Vendor",
+        i.status               AS "Status",
+        i.due_date             AS "Due Date",
+        i.total_amount         AS "Amount",
+        CASE
+          WHEN i.due_date IS NULL THEN 'No Due Date'
+          WHEN NOW() - i.due_date <= INTERVAL '30 days'  THEN '0-30 days overdue'
+          WHEN NOW() - i.due_date <= INTERVAL '60 days'  THEN '31-60 days overdue'
+          WHEN NOW() - i.due_date <= INTERVAL '90 days'  THEN '61-90 days overdue'
+          ELSE 'Over 90 days overdue'
+        END                    AS "Aging Bucket",
+        EXTRACT(EPOCH FROM (NOW() - i.due_date))::int / 86400 AS "Days Overdue"
+      FROM invoices i
+      LEFT JOIN vendors v ON v.id = i.vendor_id
+      WHERE i.organization_id = ${organizationId}
+        AND i.status NOT IN ('approved', 'paid', 'cancelled')
+        AND (i.due_date IS NULL OR i.due_date < NOW())
+      ORDER BY i.due_date ASC NULLS LAST
+    `);
+    return toCsv(rows as Record<string, unknown>[]);
+  }
+
   async exportGrnSummary(organizationId: string): Promise<string> {
     const rows = await this.db.execute(sql`
       SELECT

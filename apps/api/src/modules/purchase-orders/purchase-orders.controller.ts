@@ -41,6 +41,12 @@ export class PurchaseOrdersController {
     return this.purchaseOrdersService.getVersionHistory(id, orgId);
   }
 
+  @Get(':id/receiving-summary')
+  @ApiOperation({ summary: 'Get receiving progress per PO line' })
+  getReceivingSummary(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.purchaseOrdersService.getReceivingSummary(id, orgId);
+  }
+
   @Get(':id/pdf')
   @ApiOperation({ summary: 'Download PO as PDF' })
   async getPdf(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string, @Res() res: Response) {
