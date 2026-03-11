@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import SidebarNav from './sidebar-nav';
 import { api } from '../lib/api';
 import { COLORS, SHADOWS } from '../lib/theme';
@@ -202,6 +202,303 @@ function GlobalSearch({ isMobile }: { isMobile: boolean }) {
   );
 }
 
+/* ── Bell Icon ── */
+
+function BellIcon({ hasUnread }: { hasUnread: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M10 2a6 6 0 0 0-6 6v2.5l-1.5 2V14h15v-1.5L16 10.5V8a6 6 0 0 0-6-6z"
+        stroke={hasUnread ? COLORS.accentBlue : COLORS.textSecondary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 14a2 2 0 0 0 4 0"
+        stroke={hasUnread ? COLORS.accentBlue : COLORS.textSecondary}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+const ENTITY_ROUTES: Record<string, string> = {
+  requisition: '/requisitions',
+  purchase_order: '/purchase-orders',
+  invoice: '/invoices',
+};
+
+/* ── Notification Bell ── */
+
+function NotificationBell() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchCount = useCallback(() => {
+    api.notifications.unreadCount()
+      .then((data) => setUnreadCount(data.count))
+      .catch(() => {});
+  }, []);
+
+  // Initial fetch + polling every 30s
+  useEffect(() => {
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchCount]);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleBellClick() {
+    if (!open) {
+      setLoading(true);
+      api.notifications.list({ limit: 10 })
+        .then((data) => setNotifications(data))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+    setOpen((v) => !v);
+  }
+
+  async function handleMarkAllRead() {
+    await api.notifications.markAllRead().catch(() => {});
+    setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
+    setUnreadCount(0);
+  }
+
+  async function handleNotificationClick(notification: any) {
+    if (!notification.readAt) {
+      await api.notifications.markRead(notification.id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((n) => n.id === notification.id ? { ...n, readAt: new Date().toISOString() } : n),
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+    setOpen(false);
+    if (notification.entityType && notification.entityId) {
+      const base = ENTITY_ROUTES[notification.entityType];
+      if (base) router.push(`${base}/${notification.entityId}`);
+    }
+  }
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative' }}>
+      <button
+        onClick={handleBellClick}
+        aria-label="Notifications"
+        style={{
+          position: 'relative',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0.375rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '8px',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.hoverBg)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+      >
+        <BellIcon hasUnread={unreadCount > 0} />
+        {unreadCount > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              background: COLORS.badgeRed,
+              color: COLORS.white,
+              borderRadius: '999px',
+              fontSize: '0.625rem',
+              fontWeight: 700,
+              lineHeight: 1,
+              minWidth: '16px',
+              height: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 3px',
+            }}
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            width: '360px',
+            background: COLORS.white,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: '12px',
+            boxShadow: SHADOWS.dropdown,
+            zIndex: 100,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.75rem 1rem',
+              borderBottom: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <span style={{ fontWeight: 600, fontSize: '0.875rem', color: COLORS.textPrimary }}>
+              Notifications
+            </span>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  color: COLORS.accentBlue,
+                  padding: 0,
+                  fontWeight: 500,
+                }}
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* Body */}
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {loading && (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: COLORS.textMuted, fontSize: '0.8125rem' }}>
+                Loading...
+              </div>
+            )}
+            {!loading && notifications.length === 0 && (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: COLORS.textMuted, fontSize: '0.8125rem' }}>
+                No notifications
+              </div>
+            )}
+            {!loading && notifications.map((n) => {
+              const isUnread = !n.readAt;
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    background: isUnread ? COLORS.accentBlueLight : 'none',
+                    border: 'none',
+                    borderBottom: `1px solid ${COLORS.border}`,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = isUnread ? '#e0edff' : COLORS.hoverBg)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = isUnread ? COLORS.accentBlueLight : 'none')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    {isUnread && (
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          marginTop: '5px',
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: COLORS.accentBlue,
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontSize: '0.8125rem',
+                        fontWeight: isUnread ? 600 : 500,
+                        color: COLORS.textPrimary,
+                        flex: 1,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {n.title}
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: '0.6875rem', color: COLORS.textMuted, marginTop: '2px' }}>
+                      {timeAgo(n.createdAt)}
+                    </span>
+                  </div>
+                  {n.body && (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: COLORS.textSecondary,
+                        lineHeight: 1.4,
+                        paddingLeft: isUnread ? '1.0625rem' : 0,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {n.body}
+                    </span>
+                  )}
+                  {n.entityType && n.entityId && (
+                    <span
+                      style={{
+                        paddingLeft: isUnread ? '1.0625rem' : 0,
+                        fontSize: '0.6875rem',
+                        color: COLORS.accentBlue,
+                        fontWeight: 500,
+                      }}
+                    >
+                      View {n.entityType.replace('_', ' ')} &rarr;
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── AppShell ── */
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -346,6 +643,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           )}
           <GlobalSearch isMobile={isMobile} />
+          <div style={{ marginLeft: 'auto' }}>
+            <NotificationBell />
+          </div>
         </div>
 
         {/* Page content */}

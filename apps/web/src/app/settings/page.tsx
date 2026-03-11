@@ -22,15 +22,7 @@ interface OAuthStatus {
   xeroTenantId?: string;
 }
 
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={<div style={{ padding: '2rem' }}>Loading...</div>}>
-      <SettingsInner />
-    </Suspense>
-  );
-}
-
-function SettingsInner() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as Tab | null) ?? 'branding';
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
@@ -395,6 +387,14 @@ function SettingsInner() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem', color: COLORS.textMuted }}>Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
 

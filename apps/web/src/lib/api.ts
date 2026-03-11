@@ -273,6 +273,17 @@ export const api = {
     listInvoices: (token: string) =>
       apiFetch<any[]>(`/vendor-portal/invoices?token=${encodeURIComponent(token)}`),
   },
+  notifications: {
+    list: (params?: { unreadOnly?: boolean; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.unreadOnly) q.set('unreadOnly', 'true');
+      if (params?.limit) q.set('limit', String(params.limit));
+      return apiFetch<any[]>(`/notifications${q.toString() ? '?' + q : ''}`);
+    },
+    unreadCount: () => apiFetch<{ count: number }>('/notifications/unread-count'),
+    markRead: (id: string) => apiFetch<void>(`/notifications/${id}/read`, { method: 'POST' }),
+    markAllRead: () => apiFetch<void>('/notifications/read-all', { method: 'POST' }),
+  },
   settings: {
     getAll: () => apiFetch<Record<string, string>>('/settings'),
     getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),

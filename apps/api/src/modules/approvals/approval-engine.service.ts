@@ -1,15 +1,19 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, and, sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { approvalRules, approvalRuleSteps, approvalRequests, approvalActions, requisitions, purchaseOrders } from '@betterspend/db';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const DEMO_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000002';
 
 @Injectable()
 export class ApprovalEngineService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly webhookEvents: WebhookEventService,
+    @Optional() private readonly notifications: NotificationsService,
   ) {}
 
   // Evaluate a JSONB condition expression against an entity object
@@ -137,6 +141,19 @@ export class ApprovalEngineService {
       entityId,
       ruleName: rule.name,
     });
+
+    if (this.notifications) {
+      const entityLabel = entityType === 'requisition' ? 'Requisition' : 'Purchase Order';
+      this.notifications.create(
+        organizationId,
+        DEMO_ADMIN_USER_ID,
+        'approval_request',
+        `Approval Required: ${entityLabel}`,
+        `A ${entityLabel.toLowerCase()} requires your approval (rule: ${rule.name}).`,
+        entityType,
+        entityId,
+      ).catch(() => {});
+    }
 
     return { autoApproved: false, rule, requestId };
   }

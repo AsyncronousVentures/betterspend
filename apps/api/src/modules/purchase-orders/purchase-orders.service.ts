@@ -1,11 +1,14 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { Db } from '@betterspend/db';
 import { purchaseOrders, poLines, poVersions, blanketReleases, requisitions } from '@betterspend/db';
+
+const DEMO_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000002';
 import { z } from 'zod';
 
 const createPoSchema = z.object({
@@ -57,6 +60,7 @@ export class PurchaseOrdersService {
     private readonly sequenceService: SequenceService,
     private readonly webhookEvents: WebhookEventService,
     private readonly audit: AuditService,
+    @Optional() private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; vendorId?: string }) {
@@ -150,6 +154,17 @@ export class PurchaseOrdersService {
       .returning();
     this.webhookEvents.emit(organizationId, 'po.issued', { purchaseOrder: updated });
     this.audit.log(organizationId, issuedBy ?? null, 'purchase_order', id, 'issued', { totalAmount: updated.totalAmount }).catch(() => {});
+    if (this.notifications) {
+      this.notifications.create(
+        organizationId,
+        DEMO_ADMIN_USER_ID,
+        'po_issued',
+        'Purchase Order Issued',
+        `Purchase Order ${updated.number} has been issued to the vendor.`,
+        'purchase_order',
+        id,
+      ).catch(() => {});
+    }
     return updated;
   }
 

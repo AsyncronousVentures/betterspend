@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
@@ -9,6 +9,9 @@ import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { GlExportService } from '../gl/gl-export.service';
 import { BudgetsService } from '../budgets/budgets.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const DEMO_ADMIN_USER_ID = '00000000-0000-0000-0000-000000000002';
 
 export interface CreateInvoiceInput {
   purchaseOrderId?: string;
@@ -37,6 +40,7 @@ export class InvoicesService {
     private readonly glExport: GlExportService,
     private readonly budgets: BudgetsService,
     private readonly audit: AuditService,
+    @Optional() private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -132,6 +136,17 @@ export class InvoicesService {
       const matchSt = (created as any).matchStatus;
       if (matchSt === 'exception') {
         this.webhookEvents.emit(organizationId, 'invoice.exception', { invoice: created });
+        if (this.notifications) {
+          this.notifications.create(
+            organizationId,
+            DEMO_ADMIN_USER_ID,
+            'invoice_exception',
+            'Invoice Match Exception',
+            `Invoice ${(created as any).internalNumber} has a 3-way match exception and requires review.`,
+            'invoice',
+            invoiceId,
+          ).catch(() => {});
+        }
       } else {
         this.webhookEvents.emit(organizationId, 'invoice.matched', { invoice: created });
       }
@@ -182,6 +197,17 @@ export class InvoicesService {
     const approved = await this.findOne(id, organizationId);
     this.webhookEvents.emit(organizationId, 'invoice.approved', { invoice: approved });
     this.audit.log(organizationId, approverId, 'invoice', id, 'approved', { totalAmount: (approved as any).totalAmount }).catch(() => {});
+    if (this.notifications) {
+      this.notifications.create(
+        organizationId,
+        DEMO_ADMIN_USER_ID,
+        'invoice_approved',
+        'Invoice Approved',
+        `Invoice ${(approved as any).internalNumber} has been approved for payment.`,
+        'invoice',
+        id,
+      ).catch(() => {});
+    }
     this.glExport.enqueue(organizationId, id, 'qbo');
 
     // Auto-track budget spend: resolve department via PO → Requisition

@@ -18,3 +18,4 @@ export * from './contracts';
 export * from './system-settings';
 export * from './password-reset-tokens';
 export * from './vendor-portal-tokens';
+export * from './notifications';

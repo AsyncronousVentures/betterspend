@@ -15,6 +15,7 @@ import { authSessions, authAccounts } from './schema/auth';
 import { contracts, contractLines, contractAmendments } from './schema/contracts';
 import { systemSettings } from './schema/system-settings';
 import { vendorPortalTokens } from './schema/vendor-portal-tokens';
+import { notifications } from './schema/notifications';
 
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -37,6 +38,11 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   organization: one(organizations, { fields: [users.organizationId], references: [organizations.id] }),
   department: one(departments, { fields: [users.departmentId], references: [departments.id] }),
   userRoles: many(userRoles),
+  notifications: many(notifications),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
 
 export const userRolesRelations = relations(userRoles, ({ one }) => ({

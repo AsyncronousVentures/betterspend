@@ -32,6 +32,7 @@ import { PasswordResetModule } from './modules/password-reset/password-reset.mod
 import { DocumentsModule } from './modules/documents/documents.module';
 import { StorageModule } from './common/storage/storage.module';
 import { VendorPortalModule } from './modules/vendor-portal/vendor-portal.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { VendorPortalModule } from './modules/vendor-portal/vendor-portal.module
     DatabaseModule,
     QueueModule,
     StorageModule,
+    NotificationsModule,
     AuthModule,
     CommonServicesModule,
     WebhooksModule,
