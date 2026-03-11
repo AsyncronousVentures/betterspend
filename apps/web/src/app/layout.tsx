@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import AppShell from '../components/app-shell';
 import { ToastProvider } from '../components/toast';
+import { PwaRegister } from '../components/pwa-register';
 import './globals.css';
 
 const inter = Inter({
@@ -12,6 +13,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'BetterSpend',
   description: 'Open Source Purchase Order Management',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'BetterSpend',
+  },
 };
 
 export default function RootLayout({
@@ -21,7 +28,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.className}>
+      <head>
+        <meta name="theme-color" content="#3b82f6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body>
+        <PwaRegister />
         <ToastProvider>
           <AppShell>
             {children}

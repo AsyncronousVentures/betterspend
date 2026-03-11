@@ -8,6 +8,34 @@ import { COLORS, SHADOWS } from '../lib/theme';
 import { useIsMobile } from '../lib/use-media-query';
 import { useBranding } from '../lib/branding';
 
+/* ── Offline Indicator ── */
+
+function OfflineIndicator() {
+  const [isOffline, setIsOffline] = useState(false);
+  useEffect(() => {
+    const go = () => setIsOffline(!navigator.onLine);
+    window.addEventListener('online', go);
+    window.addEventListener('offline', go);
+    return () => {
+      window.removeEventListener('online', go);
+      window.removeEventListener('offline', go);
+    };
+  }, []);
+  if (!isOffline) return null;
+  return (
+    <div style={{
+      background: '#f59e0b',
+      color: '#000',
+      textAlign: 'center',
+      padding: '0.25rem',
+      fontSize: '0.75rem',
+      fontWeight: 600,
+    }}>
+      You are offline — some features may be unavailable
+    </div>
+  );
+}
+
 const AUTH_PATHS = ['/login', '/signup', '/punchout', '/forgot-password', '/reset-password', '/vendor-portal'];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -608,6 +636,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content column */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Offline banner */}
+        <OfflineIndicator />
         {/* Top bar */}
         <div style={{
           background: COLORS.topbarBg,

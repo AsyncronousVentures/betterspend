@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { RequisitionsService } from './requisitions.service';
+import { AiRequisitionService } from './ai-requisition.service';
 import { createRequisitionSchema } from '@betterspend/shared';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 import { CurrentUserId } from '../../common/decorators/current-user-id.decorator';
@@ -10,7 +11,18 @@ import { CurrentUserId } from '../../common/decorators/current-user-id.decorator
 @ApiTags('requisitions')
 @Controller('requisitions')
 export class RequisitionsController {
-  constructor(private readonly requisitionsService: RequisitionsService) {}
+  constructor(
+    private readonly requisitionsService: RequisitionsService,
+    private readonly aiRequisitionService: AiRequisitionService,
+  ) {}
+
+  @Post('ai-parse')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Parse plain-language text into a structured requisition draft using AI' })
+  async aiParse(@Body('text') text: string) {
+    if (!text?.trim()) return { error: 'text is required' };
+    return this.aiRequisitionService.parseFromText(text.trim());
+  }
 
   @Get()
   @ApiOperation({ summary: 'List requisitions' })

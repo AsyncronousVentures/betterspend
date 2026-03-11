@@ -125,6 +125,7 @@ export const api = {
     list: () => apiFetch<any[]>('/requisitions'),
     get: (id: string) => apiFetch<any>(`/requisitions/${id}`),
     create: (data: unknown) => apiFetch<any>('/requisitions', { method: 'POST', body: JSON.stringify(data) }),
+    aiParse: (text: string) => apiFetch<any>('/requisitions/ai-parse', { method: 'POST', body: JSON.stringify({ text }) }),
     submit: (id: string) => apiFetch<any>(`/requisitions/${id}/submit`, { method: 'POST' }),
     cancel: (id: string) => apiFetch<any>(`/requisitions/${id}/cancel`, { method: 'POST' }),
   },

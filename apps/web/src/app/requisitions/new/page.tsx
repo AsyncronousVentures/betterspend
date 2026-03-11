@@ -151,6 +151,9 @@ function NewRequisitionContent() {
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [aiText, setAiText] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
 
   const total = lines.reduce((sum, l) => sum + (parseFloat(l.qty) || 0) * (parseFloat(l.unitPrice) || 0), 0);
 
@@ -168,6 +171,41 @@ function NewRequisitionContent() {
       vendorId: item.vendor?.id ?? line.vendorId,
       catalogItemId: item.id,
     } : line));
+  }
+
+  async function handleAiParse() {
+    if (!aiText.trim()) return;
+    setAiLoading(true);
+    setAiMsg('');
+    try {
+      const res = await fetch('/api/v1/requisitions/ai-parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-org-id': '00000000-0000-0000-0000-000000000001' },
+        body: JSON.stringify({ text: aiText }),
+      });
+      const parsed = await res.json();
+      if (parsed.error) { setAiMsg('Parse failed: ' + parsed.error); return; }
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.description) setDescription(parsed.description);
+      if (parsed.priority) setPriority(parsed.priority);
+      if (parsed.neededBy) setNeededBy(parsed.neededBy.slice(0, 10));
+      if (parsed.lines?.length) {
+        setLines(parsed.lines.map((l: any) => ({
+          description: l.description || '',
+          qty: String(l.quantity || 1),
+          uom: l.unitOfMeasure || 'each',
+          unitPrice: String(l.unitPrice || 0),
+          vendorId: '',
+          catalogItemId: '',
+        })));
+      }
+      setAiMsg('✓ Fields populated from your description. Review and adjust as needed.');
+      setAiText('');
+    } catch {
+      setAiMsg('AI parsing failed. Please fill in the form manually.');
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -205,6 +243,33 @@ function NewRequisitionContent() {
           &larr; Back to Requisitions
         </Link>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: COLORS.textPrimary }}>New Requisition</h1>
+      </div>
+
+      {/* AI Parse Panel */}
+      <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%)', border: `1px solid ${COLORS.accentBlueLight}`, borderRadius: '10px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <span style={{ fontSize: '1.25rem' }}>✨</span>
+          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: COLORS.accentBlueDark }}>AI-Assisted Creation</span>
+          <span style={{ fontSize: '0.75rem', color: COLORS.textSecondary }}>— Describe what you need in plain language</span>
+        </div>
+        <textarea
+          value={aiText}
+          onChange={(e) => setAiText(e.target.value)}
+          placeholder="e.g. I need 50 boxes of A4 paper and 10 printer cartridges for the office. These are urgent — needed by next Friday. Preferred vendor is OfficeMax."
+          rows={3}
+          style={{ ...inputStyle, width: '100%', resize: 'vertical', marginBottom: '0.75rem', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={handleAiParse}
+            disabled={!aiText.trim() || aiLoading}
+            style={{ background: COLORS.accentBlue, color: '#fff', border: 'none', borderRadius: '7px', padding: '0.45rem 1rem', fontSize: '0.8rem', fontWeight: 600, cursor: aiText.trim() && !aiLoading ? 'pointer' : 'not-allowed', opacity: aiText.trim() && !aiLoading ? 1 : 0.6 }}
+          >
+            {aiLoading ? 'Parsing...' : '✨ Parse with AI'}
+          </button>
+          {aiMsg && <span style={{ fontSize: '0.8rem', color: aiMsg.startsWith('✓') ? COLORS.accentGreen : COLORS.accentRed }}>{aiMsg}</span>}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit}>
