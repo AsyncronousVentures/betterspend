@@ -34,6 +34,7 @@ export const api = {
     get: (id: string) => apiFetch<any>(`/vendors/${id}`),
     create: (data: unknown) => apiFetch<any>('/vendors', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: unknown) => apiFetch<any>(`/vendors/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    transactions: (id: string) => apiFetch<any>(`/vendors/${id}/transactions`),
   },
   users: {
     list: () => apiFetch<any[]>('/users'),

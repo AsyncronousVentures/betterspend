@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 
 export default function VendorDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [vendor, setVendor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<any>({});
+  const [txns, setTxns] = useState<{ invoices: any[]; purchaseOrders: any[] } | null>(null);
 
   useEffect(() => {
     api.vendors.get(id).then((v) => {
@@ -29,6 +29,7 @@ export default function VendorDetailPage() {
         country: v.address?.country || '',
       });
     }).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    api.vendors.transactions(id).then(setTxns).catch(() => {});
   }, [id]);
 
   async function handleSave(e: FormEvent) {
@@ -122,6 +123,76 @@ export default function VendorDetailPage() {
             <Field label="Postal Code" value={vendor.address?.postalCode || '—'} />
             <Field label="Country" value={vendor.address?.country || '—'} />
           </Section>
+          {/* Purchase Orders */}
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
+            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginBottom: '0.75rem' }}>
+              Purchase Orders {txns ? `(${txns.purchaseOrders.length})` : ''}
+            </h2>
+            {!txns || txns.purchaseOrders.length === 0 ? (
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>No purchase orders</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    {['PO Number', 'Status', 'Amount', 'Issued'].map((h) => (
+                      <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#6b7280' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {txns.purchaseOrders.map((po: any) => (
+                    <tr key={po.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '0.4rem 0.6rem' }}>
+                        <Link href={`/purchase-orders/${po.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{po.number}</Link>
+                      </td>
+                      <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: '#374151' }}>{po.status}</td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>
+                        {po.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(po.amount) : '—'}
+                      </td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{po.issuedAt ? new Date(po.issuedAt).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Invoices */}
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
+            <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', marginBottom: '0.75rem' }}>
+              Invoices {txns ? `(${txns.invoices.length})` : ''}
+            </h2>
+            {!txns || txns.invoices.length === 0 ? (
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>No invoices</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    {['Invoice #', 'Vendor #', 'Status', 'Match', 'Amount', 'Date'].map((h) => (
+                      <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: 'left', fontWeight: 600, color: '#6b7280' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {txns.invoices.map((inv: any) => (
+                    <tr key={inv.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '0.4rem 0.6rem' }}>
+                        <Link href={`/invoices/${inv.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{inv.number}</Link>
+                      </td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{inv.vendorInvoiceNumber ?? '—'}</td>
+                      <td style={{ padding: '0.4rem 0.6rem', textTransform: 'capitalize', color: '#374151' }}>{inv.status}</td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: inv.matchStatus === 'exception' ? '#dc2626' : '#374151' }}>{inv.matchStatus ?? '—'}</td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>
+                        {inv.amount != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.amount) : '—'}
+                      </td>
+                      <td style={{ padding: '0.4rem 0.6rem', color: '#6b7280' }}>{inv.date ? new Date(inv.date).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
           {/* Punchout */}
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
