@@ -54,4 +54,31 @@ export class ReportsController {
     res.setHeader('Content-Disposition', 'attachment; filename="spend-summary.csv"');
     res.send(csv);
   }
+
+  @Get('budgets/csv')
+  @ApiOperation({ summary: 'Export budget utilization as CSV' })
+  async exportBudgets(@CurrentOrgId() orgId: string, @Res() res: Response) {
+    const csv = await this.reportsService.exportBudgets(orgId);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="budgets.csv"');
+    res.send(csv);
+  }
+
+  @Get('department-spend/csv')
+  @ApiOperation({ summary: 'Export department spend summary as CSV' })
+  async exportDepartmentSpend(@CurrentOrgId() orgId: string, @Res() res: Response) {
+    const csv = await this.reportsService.exportDepartmentSpend(orgId);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="department-spend.csv"');
+    res.send(csv);
+  }
+
+  @Get('goods-receipts/csv')
+  @ApiOperation({ summary: 'Export goods receipts summary as CSV' })
+  async exportGrnSummary(@CurrentOrgId() orgId: string, @Res() res: Response) {
+    const csv = await this.reportsService.exportGrnSummary(orgId);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="goods-receipts.csv"');
+    res.send(csv);
+  }
 }

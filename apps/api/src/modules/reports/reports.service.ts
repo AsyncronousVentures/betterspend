@@ -104,4 +104,69 @@ export class ReportsService {
     `);
     return toCsv(rows as Record<string, unknown>[]);
   }
+
+  async exportBudgets(organizationId: string): Promise<string> {
+    const rows = await this.db.execute(sql`
+      SELECT
+        b.name            AS "Budget Name",
+        b.budget_type     AS "Type",
+        b.fiscal_year     AS "Fiscal Year",
+        b.total_amount    AS "Allocated",
+        b.spent_amount    AS "Spent",
+        (b.total_amount - b.spent_amount)::numeric AS "Remaining",
+        ROUND((b.spent_amount / NULLIF(b.total_amount, 0)) * 100, 1) AS "Utilization %",
+        b.currency        AS "Currency",
+        d.name            AS "Department",
+        p.name            AS "Project",
+        b.created_at      AS "Created At"
+      FROM budgets b
+      LEFT JOIN departments d ON d.id = b.department_id
+      LEFT JOIN projects    p ON p.id = b.project_id
+      WHERE b.organization_id = ${organizationId}
+      ORDER BY b.fiscal_year DESC, "Utilization %" DESC
+    `);
+    return toCsv(rows as Record<string, unknown>[]);
+  }
+
+  async exportDepartmentSpend(organizationId: string): Promise<string> {
+    const rows = await this.db.execute(sql`
+      SELECT
+        COALESCE(d.name, 'Unassigned')             AS "Department",
+        COUNT(DISTINCT po.id)::int                  AS "PO Count",
+        SUM(po.total_amount)::numeric               AS "PO Total",
+        COUNT(DISTINCT r.id)::int                   AS "Requisition Count",
+        SUM(r.total_amount)::numeric                AS "Req Total"
+      FROM departments d
+      FULL OUTER JOIN requisitions r ON r.department_id = d.id AND r.organization_id = ${organizationId}
+      LEFT JOIN purchase_orders po ON po.requisition_id = r.id
+        AND po.status NOT IN ('draft', 'cancelled')
+      WHERE d.organization_id = ${organizationId} OR r.organization_id = ${organizationId}
+      GROUP BY d.name
+      ORDER BY "PO Total" DESC NULLS LAST
+    `);
+    return toCsv(rows as Record<string, unknown>[]);
+  }
+
+  async exportGrnSummary(organizationId: string): Promise<string> {
+    const rows = await this.db.execute(sql`
+      SELECT
+        gr.grn_number                 AS "GRN Number",
+        po.internal_number            AS "PO Number",
+        v.name                        AS "Vendor",
+        gr.status                     AS "Status",
+        gr.received_at                AS "Received At",
+        u.name                        AS "Received By",
+        COUNT(grl.id)::int            AS "Line Count",
+        SUM(grl.quantity_received)::numeric AS "Total Qty Received"
+      FROM goods_receipts gr
+      JOIN purchase_orders po ON po.id = gr.purchase_order_id
+      LEFT JOIN vendors v ON v.id = po.vendor_id
+      LEFT JOIN users u ON u.id = gr.received_by
+      LEFT JOIN goods_receipt_lines grl ON grl.goods_receipt_id = gr.id
+      WHERE gr.organization_id = ${organizationId}
+      GROUP BY gr.id, gr.grn_number, po.internal_number, v.name, gr.status, gr.received_at, u.name
+      ORDER BY gr.received_at DESC
+    `);
+    return toCsv(rows as Record<string, unknown>[]);
+  }
 }

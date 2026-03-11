@@ -58,6 +58,24 @@ const REPORTS: Report[] = [
     description: 'Aggregated spend per vendor from approved invoices.',
     endpoint: '/reports/spend-summary/csv',
   },
+  {
+    id: 'budgets',
+    title: 'Budget Utilization',
+    description: 'All budgets with allocated, spent, remaining, and utilization percentage.',
+    endpoint: '/reports/budgets/csv',
+  },
+  {
+    id: 'dept-spend',
+    title: 'Department Spend',
+    description: 'PO and requisition totals broken down by department.',
+    endpoint: '/reports/department-spend/csv',
+  },
+  {
+    id: 'grn',
+    title: 'Goods Receipts',
+    description: 'All GRNs with PO, vendor, received date, and quantities.',
+    endpoint: '/reports/goods-receipts/csv',
+  },
 ];
 
 export default function ReportsPage() {
