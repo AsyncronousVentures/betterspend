@@ -16,3 +16,4 @@ export * from './ocr';
 export * from './auth';
 export * from './contracts';
 export * from './system-settings';
+export * from './password-reset-tokens';
