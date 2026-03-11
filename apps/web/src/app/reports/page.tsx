@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
-
-function getCookie(name: string) {
-  if (typeof document === 'undefined') return undefined;
-  return document.cookie.split('; ').find((r) => r.startsWith(name + '='))?.split('=')[1];
-}
+import { api } from '../../lib/api';
 
 interface Report {
   id: string;
@@ -77,16 +71,10 @@ export default function ReportsPage() {
   async function download(report: Report) {
     setDownloading(report.id);
     try {
-      const token = getCookie('bs_token');
-      const q = new URLSearchParams();
       const rp = params[report.id] || {};
-      for (const [k, v] of Object.entries(rp)) {
-        if (v) q.set(k, v);
-      }
-      const url = `${API_BASE}/api/v1${report.endpoint}${q.toString() ? '?' + q : ''}`;
-      const res = await fetch(url, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const filtered: Record<string, string> = {};
+      for (const [k, v] of Object.entries(rp)) { if (v) filtered[k] = v; }
+      const res = await api.reports.download(report.endpoint.replace('/reports/', ''), filtered);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const objUrl = URL.createObjectURL(blob);
