@@ -185,6 +185,10 @@ export const api = {
     getJob: (id: string) => apiFetch<any>(`/ocr/jobs/${id}`),
     linkToInvoice: (jobId: string, invoiceId: string) => apiFetch<any>(`/ocr/jobs/${jobId}/link/${invoiceId}`, { method: 'POST' }),
   },
+  punchout: {
+    getSession: (token: string) => apiFetch<any>(`/punchout/session/${token}`),
+    orderReturn: (session: string, data: unknown) => apiFetch<any>(`/punchout/return?session=${session}`, { method: 'POST', body: JSON.stringify(data) }),
+  },
   analytics: {
     kpis: () => apiFetch<any>('/analytics/kpis'),
     spendByVendor: () => apiFetch<any[]>('/analytics/spend/by-vendor'),
