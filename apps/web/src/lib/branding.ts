@@ -54,9 +54,14 @@ export function invalidateBrandingCache() {
 }
 
 export function useBranding(): BrandingSettings {
-  const [branding, setBranding] = useState<BrandingSettings>(() => loadCache() ?? DEFAULTS);
+  // Always start with DEFAULTS so server and client render identically.
+  // Load cache and fetch fresh data client-side only (inside useEffect).
+  const [branding, setBranding] = useState<BrandingSettings>(DEFAULTS);
 
   useEffect(() => {
+    const cached = loadCache();
+    if (cached) setBranding(cached);
+
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
     fetch(`${API_BASE}/api/v1/settings/branding`)
       .then((r) => r.ok ? r.json() : null)
