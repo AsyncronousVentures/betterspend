@@ -243,6 +243,14 @@ export default function CatalogPage() {
                   </td>
                   <td style={{ padding: '0.875rem 1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {item.isActive && (
+                        <Link
+                          href={`/requisitions/new?catalogItemId=${item.id}&description=${encodeURIComponent(item.name)}&unitPrice=${encodeURIComponent(item.unitPrice ?? '0')}&uom=${encodeURIComponent(item.unitOfMeasure ?? 'each')}${item.vendor?.id ? `&vendorId=${item.vendor.id}` : ''}`}
+                          style={{ ...btnDanger, color: '#059669', borderColor: '#059669', textDecoration: 'none', display: 'inline-block' }}
+                        >
+                          + Req
+                        </Link>
+                      )}
                       <button style={{ ...btnDanger, color: '#2563eb', borderColor: '#2563eb' }} onClick={() => startEdit(item)}>Edit</button>
                       <button style={btnDanger} onClick={() => handleDelete(item.id)}>Delete</button>
                     </div>
