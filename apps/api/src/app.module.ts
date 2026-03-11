@@ -31,6 +31,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { PasswordResetModule } from './modules/password-reset/password-reset.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { StorageModule } from './common/storage/storage.module';
+import { VendorPortalModule } from './modules/vendor-portal/vendor-portal.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { StorageModule } from './common/storage/storage.module';
     SettingsModule,
     PasswordResetModule,
     DocumentsModule,
+    VendorPortalModule,
   ],
 })
 export class AppModule {}

@@ -8,7 +8,7 @@ import { COLORS, SHADOWS } from '../lib/theme';
 import { useIsMobile } from '../lib/use-media-query';
 import { useBranding } from '../lib/branding';
 
-const AUTH_PATHS = ['/login', '/signup', '/punchout', '/forgot-password', '/reset-password'];
+const AUTH_PATHS = ['/login', '/signup', '/punchout', '/forgot-password', '/reset-password', '/vendor-portal'];
 
 const TYPE_LABELS: Record<string, string> = {
   requisition: 'Req',

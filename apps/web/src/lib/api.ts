@@ -252,6 +252,24 @@ export const api = {
     request: (email: string) => apiFetch<{ success: boolean }>('/password-reset/request', { method: 'POST', body: JSON.stringify({ email }) }),
     reset: (token: string, password: string) => apiFetch<{ success: boolean }>('/password-reset/reset', { method: 'POST', body: JSON.stringify({ token, password }) }),
   },
+  vendorPortal: {
+    sendAccess: (vendorId: string) =>
+      apiFetch<{ success: boolean }>('/vendor-portal/access', {
+        method: 'POST',
+        body: JSON.stringify({ vendorId }),
+      }),
+    dashboard: (token: string) =>
+      apiFetch<any>(`/vendor-portal/dashboard?token=${encodeURIComponent(token)}`),
+    getPo: (poId: string, token: string) =>
+      apiFetch<any>(`/vendor-portal/po/${poId}?token=${encodeURIComponent(token)}`),
+    submitInvoice: (token: string, data: any) =>
+      apiFetch<any>(`/vendor-portal/invoice?token=${encodeURIComponent(token)}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listInvoices: (token: string) =>
+      apiFetch<any[]>(`/vendor-portal/invoices?token=${encodeURIComponent(token)}`),
+  },
   settings: {
     getAll: () => apiFetch<Record<string, string>>('/settings'),
     getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),
