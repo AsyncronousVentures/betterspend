@@ -73,6 +73,7 @@ export default function HomePage() {
   const [pending, setPending] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
   const [expiringContracts, setExpiringContracts] = useState<any[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
 
@@ -82,11 +83,13 @@ export default function HomePage() {
       api.analytics.pendingItems(),
       api.analytics.recentActivity(),
       api.contracts.expiring(30).catch(() => []),
-    ]).then(([k, p, a, ec]) => {
+      api.inventory.lowStock().catch(() => []),
+    ]).then(([k, p, a, ec, ls]) => {
       setKpis(k);
       setPending(p);
       setActivity(Array.isArray(a) ? a : []);
       setExpiringContracts(Array.isArray(ec) ? ec : []);
+      setLowStockItems(Array.isArray(ls) ? ls : []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -230,6 +233,58 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Low Stock Alert */}
+      {!loading && lowStockItems.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ background: COLORS.accentAmberLight, border: `1px solid ${COLORS.accentAmber}`, borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ padding: '0.875rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${COLORS.accentAmber}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h2 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 600, color: COLORS.accentAmberDark }}>
+                  Low Stock Alert — {lowStockItems.length} item{lowStockItems.length !== 1 ? 's' : ''} below reorder point
+                </h2>
+              </div>
+              <Link href="/inventory?lowStockOnly=true" style={{ fontSize: '0.75rem', color: COLORS.accentAmberDark, fontWeight: 500, textDecoration: 'none' }}>
+                View all &rarr;
+              </Link>
+            </div>
+            <div>
+              {lowStockItems.slice(0, 5).map((item: any) => (
+                <Link key={item.id} href={`/inventory/${item.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.625rem 1rem', borderBottom: `1px solid rgba(217,119,6,0.15)`,
+                    cursor: 'pointer', transition: 'background 0.1s',
+                  }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(217,119,6,0.08)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textPrimary }}>{item.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.125rem' }}>
+                        SKU: {item.sku}{item.location ? ` · ${item.location}` : ''}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '1rem' }}>
+                      <span style={{
+                        background: item.stockStatus === 'out_of_stock' ? COLORS.accentRedLight : COLORS.accentAmberLight,
+                        color: item.stockStatus === 'out_of_stock' ? COLORS.accentRedDark : COLORS.accentAmberDark,
+                        border: `1px solid ${item.stockStatus === 'out_of_stock' ? COLORS.accentRed : COLORS.accentAmber}`,
+                        padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600,
+                      }}>
+                        {item.stockStatus === 'out_of_stock' ? 'Out of Stock' : 'Low Stock'}
+                      </span>
+                      <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.25rem' }}>
+                        {item.quantityOnHand} {item.unit} on hand
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick actions — softer style */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick Actions</h2>
@@ -278,6 +333,7 @@ export default function HomePage() {
             { title: 'Purchase Orders', href: '/purchase-orders', desc: 'Issue and manage PO lifecycle' },
             { title: 'Approvals', href: '/approvals', desc: 'Pending items requiring your action' },
             { title: 'Receiving', href: '/receiving', desc: 'Log goods receipts (GRN)' },
+            { title: 'Inventory', href: '/inventory', desc: 'Track stock levels and movements' },
             { title: 'Invoices', href: '/invoices', desc: 'AP and 3-way invoice matching' },
             { title: 'Budgets', href: '/budgets', desc: 'Department & project budgets' },
             { title: 'GL Integration', href: '/gl-mappings', desc: 'QuickBooks / Xero mapping' },

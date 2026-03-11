@@ -354,4 +354,12 @@ export const api = {
     delete: (id: string) => apiFetch<void>(`/recurring-po/${id}`, { method: 'DELETE' }),
     run: (id: string) => apiFetch<any>(`/recurring-po/${id}/run`, { method: 'POST' }),
   },
+  inventory: {
+    list: (params?: { lowStockOnly?: boolean }) => apiFetch<any[]>(`/inventory${params?.lowStockOnly ? '?lowStockOnly=true' : ''}`),
+    lowStock: () => apiFetch<any[]>('/inventory/low-stock'),
+    get: (id: string) => apiFetch<any>(`/inventory/${id}`),
+    create: (data: unknown) => apiFetch<any>('/inventory', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: unknown) => apiFetch<any>(`/inventory/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    adjust: (id: string, data: { quantity: number; notes?: string }) => apiFetch<any>(`/inventory/${id}/adjust`, { method: 'POST', body: JSON.stringify(data) }),
+  },
 };

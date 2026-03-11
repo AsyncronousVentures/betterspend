@@ -85,6 +85,13 @@
       "when": 1773680000000,
       "tag": "0011_vendor_diversity_esg",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1773800000000,
+      "tag": "0012_inventory",
+      "breakpoints": true
     }
   ]
 }

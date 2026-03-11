@@ -46,6 +46,7 @@ const NAV_CONFIG: NavEntry[] = [
     defaultOpen: true,
     children: [
       { label: 'Receiving', href: '/receiving' },
+      { label: 'Inventory', href: '/inventory' },
       { label: 'Invoices', href: '/invoices' },
       { label: 'OCR Jobs', href: '/ocr' },
     ],

@@ -37,6 +37,7 @@ import { SupplierScorecardModule } from './modules/supplier-scorecard/supplier-s
 import { ApprovalDelegationsModule } from './modules/approval-delegations/approval-delegations.module';
 import { RfqModule } from './modules/rfq/rfq.module';
 import { RecurringPoModule } from './modules/recurring-po/recurring-po.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { RecurringPoModule } from './modules/recurring-po/recurring-po.module';
     ApprovalDelegationsModule,
     RfqModule,
     RecurringPoModule,
+    InventoryModule,
   ],
 })
 export class AppModule {}

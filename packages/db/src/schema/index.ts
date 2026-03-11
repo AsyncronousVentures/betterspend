@@ -22,3 +22,4 @@ export * from './notifications';
 export * from './approval-delegations';
 export * from './rfq';
 export * from './recurring-pos';
+export * from './inventory';

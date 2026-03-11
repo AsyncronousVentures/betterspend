@@ -6,6 +6,7 @@ import { goodsReceipts, goodsReceiptLines, purchaseOrders, poLines } from '@bett
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { AuditService } from '../audit/audit.service';
+import { InventoryService } from '../inventory/inventory.service';
 
 export interface CreateGrnInput {
   purchaseOrderId: string;
@@ -28,6 +29,7 @@ export class ReceivingService {
     private readonly sequenceService: SequenceService,
     private readonly webhookEvents: WebhookEventService,
     private readonly audit: AuditService,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -96,6 +98,24 @@ export class ReceivingService {
     const grn = await this.findOne(grnId, organizationId);
     this.webhookEvents.emit(organizationId, 'grn.created', { goodsReceipt: grn });
     this.audit.log(organizationId, input.receivedBy, 'goods_receipt', grnId, 'created', { purchaseOrderId: input.purchaseOrderId }).catch(() => {});
+
+    // Update inventory stock levels for confirmed receipt lines
+    if (input.lines && input.lines.length > 0) {
+      const inventoryLines = await Promise.all(
+        input.lines.map(async (line) => {
+          const poLine = await this.db.query.poLines.findFirst({
+            where: (p, { eq }) => eq(p.id, line.poLineId),
+          });
+          return {
+            description: poLine?.description,
+            quantityReceived: line.quantityReceived,
+            referenceId: grnId,
+          };
+        }),
+      );
+      this.inventoryService.recordReceipt(organizationId, inventoryLines).catch(() => {});
+    }
+
     return grn;
   }
 
