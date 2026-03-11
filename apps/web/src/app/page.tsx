@@ -72,6 +72,7 @@ export default function HomePage() {
   const [kpis, setKpis] = useState<any>(null);
   const [pending, setPending] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
+  const [expiringContracts, setExpiringContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useIsMobile();
 
@@ -80,10 +81,12 @@ export default function HomePage() {
       api.analytics.kpis(),
       api.analytics.pendingItems(),
       api.analytics.recentActivity(),
-    ]).then(([k, p, a]) => {
+      api.contracts.expiring(30).catch(() => []),
+    ]).then(([k, p, a, ec]) => {
       setKpis(k);
       setPending(p);
       setActivity(Array.isArray(a) ? a : []);
+      setExpiringContracts(Array.isArray(ec) ? ec : []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -174,6 +177,59 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Expiring Contracts */}
+      {!loading && expiringContracts.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ background: COLORS.accentAmberLight, border: `1px solid ${COLORS.accentAmber}`, borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ padding: '0.875rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${COLORS.accentAmber}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.875rem' }}>⚠️</span>
+                <h2 style={{ margin: 0, fontSize: '0.8125rem', fontWeight: 600, color: COLORS.accentAmberDark }}>
+                  Contracts Expiring Within 30 Days
+                </h2>
+              </div>
+              <Link href="/contracts?filter=expiring_soon" style={{
+                fontSize: '0.75rem', color: COLORS.accentAmberDark, fontWeight: 500, textDecoration: 'none',
+              }}>
+                View all →
+              </Link>
+            </div>
+            <div>
+              {expiringContracts.slice(0, 5).map((c: any) => {
+                const daysLeft = c.endDate
+                  ? Math.ceil((new Date(c.endDate).getTime() - Date.now()) / 86400000)
+                  : null;
+                return (
+                  <Link key={c.id} href={`/contracts/${c.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0.625rem 1rem', borderBottom: `1px solid rgba(217,119,6,0.15)`,
+                      cursor: 'pointer', transition: 'background 0.1s',
+                    }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(217,119,6,0.08)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: COLORS.textPrimary }}>{c.contractNumber} — {c.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.125rem' }}>{c.vendor?.name ?? 'Unknown vendor'}</div>
+                      </div>
+                      <span style={{
+                        background: (daysLeft ?? 99) <= 7 ? COLORS.accentRedLight : COLORS.accentAmberLight,
+                        color: (daysLeft ?? 99) <= 7 ? COLORS.accentRedDark : COLORS.accentAmberDark,
+                        border: `1px solid ${(daysLeft ?? 99) <= 7 ? COLORS.accentRed : COLORS.accentAmber}`,
+                        padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600, flexShrink: 0,
+                      }}>
+                        {daysLeft != null ? (daysLeft <= 0 ? 'Expired' : `${daysLeft}d left`) : 'Check date'}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick actions — softer style */}
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '0.8125rem', fontWeight: 600, color: COLORS.textSecondary, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quick Actions</h2>
@@ -225,6 +281,7 @@ export default function HomePage() {
             { title: 'Invoices', href: '/invoices', desc: 'AP and 3-way invoice matching' },
             { title: 'Budgets', href: '/budgets', desc: 'Department & project budgets' },
             { title: 'GL Integration', href: '/gl-mappings', desc: 'QuickBooks / Xero mapping' },
+            { title: 'Contracts', href: '/contracts', desc: 'Manage vendor contracts & renewals' },
             { title: 'Analytics', href: '/analytics', desc: 'Spend intelligence & KPIs' },
             { title: 'Approval Rules', href: '/approval-rules', desc: 'Configure auto-routing rules' },
             { title: 'Webhooks', href: '/webhooks', desc: 'Outbound event integrations' },
