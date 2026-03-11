@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { COLORS, SHADOWS } from '../../../lib/theme';
+import { DocumentUploader } from '../../../components/document-uploader';
 
 interface MatchResult {
   id: string;
@@ -287,6 +288,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
       {successMsg && <div style={{ marginTop: '0.75rem', background: COLORS.accentGreenLight, border: '1px solid #a7f3d0', borderRadius: '6px', padding: '0.625rem 1rem', color: COLORS.accentGreenDark, fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>{successMsg}<button onClick={() => setSuccessMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.accentGreenDark, fontWeight: 700 }}>×</button></div>}
       {error && <div style={{ marginTop: '0.75rem', background: COLORS.accentRedLight, border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: COLORS.accentRedDark, fontSize: '0.875rem' }}>{error}</div>}
+
+      {id && (
+        <div style={{ marginTop: '2rem' }}>
+          <DocumentUploader entityType="invoice" entityId={id} label="Documents" />
+        </div>
+      )}
     </div>
   );
 }

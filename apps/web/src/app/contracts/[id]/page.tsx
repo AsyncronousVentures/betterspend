@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import Link from 'next/link';
 import { api } from '../../../lib/api';
 import { COLORS, SHADOWS } from '../../../lib/theme';
+import { DocumentUploader } from '../../../components/document-uploader';
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
   msa:                'MSA',
@@ -291,6 +292,11 @@ export default function ContractDetailPage({ params }: { params: Promise<{ id: s
           </div>
         )}
       </div>
+
+      {/* Documents */}
+      {id && (
+        <DocumentUploader entityType="contract" entityId={id} label="Documents" />
+      )}
 
       {/* Terminate Modal */}
       {showTerminateModal && (

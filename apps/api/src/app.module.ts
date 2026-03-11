@@ -27,12 +27,16 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { SearchModule } from './modules/search/search.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { PasswordResetModule } from './modules/password-reset/password-reset.module';
+import { DocumentsModule } from './modules/documents/documents.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
+    StorageModule,
     AuthModule,
     CommonServicesModule,
     WebhooksModule,
@@ -58,6 +62,8 @@ import { SettingsModule } from './modules/settings/settings.module';
     SearchModule,
     ContractsModule,
     SettingsModule,
+    PasswordResetModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}
