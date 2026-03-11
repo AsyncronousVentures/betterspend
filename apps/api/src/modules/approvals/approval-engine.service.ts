@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { approvalRules, approvalRuleSteps, approvalRequests, approvalActions, requisitions, purchaseOrders } from '@betterspend/db';
@@ -141,6 +141,30 @@ export class ApprovalEngineService {
     return { autoApproved: false, rule, requestId };
   }
 
+  // Enrich approval requests with entity summary (title/number, link, amount)
+  private async enrichWithEntityInfo(rows: any[]): Promise<any[]> {
+    if (!rows.length) return rows;
+
+    const reqIds = rows.filter(r => r.approvableType === 'requisition').map(r => r.approvableId);
+    const poIds  = rows.filter(r => r.approvableType === 'purchase_order').map(r => r.approvableId);
+
+    const [reqMap, poMap]: [Record<string, any>, Record<string, any>] = await Promise.all([
+      reqIds.length ? this.db.execute(sql`
+        SELECT id, number, title, total_amount AS amount, status FROM requisitions WHERE id = ANY(${sql.raw(`ARRAY[${reqIds.map(i => `'${i}'`).join(',')}]::uuid[]`)})
+      `).then((rows) => Object.fromEntries((rows as any[]).map(r => [r.id, r]))) : {},
+      poIds.length ? this.db.execute(sql`
+        SELECT po.id, po.internal_number AS number, v.name AS "vendorName", po.total_amount AS amount, po.status
+        FROM purchase_orders po LEFT JOIN vendors v ON v.id = po.vendor_id
+        WHERE po.id = ANY(${sql.raw(`ARRAY[${poIds.map(i => `'${i}'`).join(',')}]::uuid[]`)})
+      `).then((rows) => Object.fromEntries((rows as any[]).map(r => [r.id, r]))) : {},
+    ]);
+
+    return rows.map((r) => {
+      const entity = r.approvableType === 'requisition' ? reqMap[r.approvableId] : poMap[r.approvableId];
+      return { ...r, entitySummary: entity ?? null };
+    });
+  }
+
   // Get approval request with actions and rule steps
   async getRequest(id: string) {
     const req = await this.db.query.approvalRequests.findFirst({
@@ -151,14 +175,13 @@ export class ApprovalEngineService {
       },
     });
     if (!req) throw new NotFoundException(`Approval request ${id} not found`);
-    return req;
+    const [enriched] = await this.enrichWithEntityInfo([req]);
+    return enriched;
   }
 
   // List all pending requests for an organization (filtered by approvable entity org)
   async listPending(organizationId: string) {
-    // approvalRequests has no organizationId column; we fetch all pending and
-    // the caller can filter. For now return all pending requests.
-    return this.db.query.approvalRequests.findMany({
+    const rows = await this.db.query.approvalRequests.findMany({
       where: (r, { eq }) => eq(r.status, 'pending'),
       with: {
         rule: true,
@@ -166,6 +189,7 @@ export class ApprovalEngineService {
       },
       orderBy: (r, { asc }) => asc(r.createdAt),
     });
+    return this.enrichWithEntityInfo(rows);
   }
 
   // Process an approve or reject action

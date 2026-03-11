@@ -99,9 +99,27 @@ export default function ApprovalDetailPage({ params }: { params: Promise<{ id: s
                 {approval.status.charAt(0).toUpperCase() + approval.status.slice(1)}
               </span>
             </div>
-            <p style={{ margin: '0.375rem 0 0', fontSize: '0.875rem', color: '#9ca3af', fontFamily: 'monospace' }}>
-              ID: …{approval.approvableId.slice(-8)}
-            </p>
+            {(approval as any).entitySummary ? (
+              <p style={{ margin: '0.375rem 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                <Link
+                  href={approval.approvableType === 'requisition' ? `/requisitions/${approval.approvableId}` : `/purchase-orders/${approval.approvableId}`}
+                  style={{ color: '#2563eb', textDecoration: 'none' }}
+                >
+                  {(approval as any).entitySummary.number}
+                  {(approval as any).entitySummary.title ? ` — ${(approval as any).entitySummary.title}` : ''}
+                  {(approval as any).entitySummary.vendorName ? ` — ${(approval as any).entitySummary.vendorName}` : ''}
+                </Link>
+                {(approval as any).entitySummary.amount != null && (
+                  <span style={{ marginLeft: '0.75rem', fontWeight: 600, color: '#111827' }}>
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((approval as any).entitySummary.amount)}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p style={{ margin: '0.375rem 0 0', fontSize: '0.875rem', color: '#9ca3af', fontFamily: 'monospace' }}>
+                ID: …{approval.approvableId.slice(-8)}
+              </p>
+            )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '2rem', marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
