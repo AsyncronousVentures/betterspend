@@ -16,6 +16,15 @@ export class UsersController {
     return this.usersService.findAll(orgId);
   }
 
+  @Post()
+  @ApiOperation({ summary: 'Create a new user (admin)' })
+  create(
+    @Body() body: { name: string; email: string; password: string; role?: string },
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.usersService.create(orgId, body);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by ID' })
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {

@@ -38,6 +38,7 @@ export const api = {
   users: {
     list: () => apiFetch<any[]>('/users'),
     get: (id: string) => apiFetch<any>(`/users/${id}`),
+    create: (data: unknown) => apiFetch<any>('/users', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: unknown) => apiFetch<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     addRole: (id: string, data: unknown) => apiFetch<any>(`/users/${id}/roles`, { method: 'POST', body: JSON.stringify(data) }),
     removeRole: (id: string, roleId: string) => apiFetch<void>(`/users/${id}/roles/${roleId}`, { method: 'DELETE' }),

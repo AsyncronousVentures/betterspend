@@ -5,12 +5,18 @@ import { api } from '../../lib/api';
 
 const ROLES = ['admin', 'approver', 'requester', 'receiver', 'finance'];
 
+const EMPTY_FORM = { name: '', email: '', password: '', role: 'requester' };
+
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [addRoleUserId, setAddRoleUserId] = useState<string | null>(null);
   const [newRole, setNewRole] = useState('requester');
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     load();
@@ -25,6 +31,23 @@ export default function UsersPage() {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.password) { setFormError('Name, email and password are required.'); return; }
+    setSaving(true);
+    setFormError('');
+    try {
+      await api.users.create({ name: form.name, email: form.email, password: form.password, role: form.role || undefined });
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+      await load();
+    } catch (e: any) {
+      setFormError(e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -65,8 +88,66 @@ export default function UsersPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>Users</h1>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0 }}>Users</h1>
+          <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Manage user accounts and roles</p>
+        </div>
+        <button
+          onClick={() => { setShowForm(!showForm); setFormError(''); setForm(EMPTY_FORM); }}
+          style={{ background: '#111827', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
+        >
+          {showForm ? 'Cancel' : '+ Invite User'}
+        </button>
       </div>
+
+      {showForm && (
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600 }}>Create New User</h2>
+          <form onSubmit={handleCreate}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>Full Name *</label>
+                <input
+                  value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Jane Smith"
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>Email *</label>
+                <input
+                  type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="jane@company.com"
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>Password *</label>
+                <input
+                  type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="Temporary password"
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' }}>Initial Role</label>
+                <select
+                  value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}
+                >
+                  <option value="">— No role —</option>
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            {formError && <div style={{ marginBottom: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{formError}</div>}
+            <button type="submit" disabled={saving}
+              style={{ background: '#059669', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Creating…' : 'Create User'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {error && <div style={{ color: '#dc2626', marginBottom: '1rem' }}>{error}</div>}
       {loading ? (
