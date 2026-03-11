@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '../../lib/api';
 import { COLORS, SHADOWS } from '../../lib/theme';
 import { invalidateBrandingCache } from '../../lib/branding';
 
-type Tab = 'org' | 'branding' | 'email' | 'password';
+type Tab = 'org' | 'branding' | 'email' | 'password' | 'integrations';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${COLORS.inputBorder}`,
@@ -14,8 +15,17 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem', color: COLORS.textPrimary };
 const card: React.CSSProperties = { background: COLORS.cardBg, border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '1.5rem', boxShadow: SHADOWS.card };
 
+interface OAuthStatus {
+  qbo: boolean;
+  xero: boolean;
+  qboRealmId?: string;
+  xeroTenantId?: string;
+}
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('branding');
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as Tab | null) ?? 'branding';
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [pwSaving, setPwSaving] = useState(false);
@@ -39,11 +49,34 @@ export default function SettingsPage() {
   const [smtpMsg, setSmtpMsg] = useState('');
   const [smtpError, setSmtpError] = useState('');
 
+  // Integrations state
+  const [oauthStatus, setOauthStatus] = useState<OAuthStatus>({ qbo: false, xero: false });
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [integrationsMsg, setIntegrationsMsg] = useState('');
+  const [integrationsError, setIntegrationsError] = useState('');
+
   useEffect(() => {
     api.settings.getAll().then((all) => {
       setBranding((b) => ({ ...b, ...Object.fromEntries(Object.entries(all).filter(([k]) => Object.keys(b).includes(k))) }));
       setSmtp((s) => ({ ...s, ...Object.fromEntries(Object.entries(all).filter(([k]) => Object.keys(s).includes(k))) }));
     }).catch(() => {});
+  }, []);
+
+  // Load OAuth connection status and handle callback params
+  useEffect(() => {
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    const message = searchParams.get('message');
+
+    if (connected) {
+      setIntegrationsMsg(`${connected === 'qbo' ? 'QuickBooks Online' : 'Xero'} connected successfully.`);
+    }
+    if (error) {
+      setIntegrationsError(`Failed to connect ${error === 'qbo' ? 'QuickBooks Online' : 'Xero'}: ${message ? decodeURIComponent(message) : 'Unknown error'}`);
+    }
+
+    api.gl.oauthStatus().then(setOauthStatus).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
@@ -81,17 +114,52 @@ export default function SettingsPage() {
     } catch (e: any) { setSmtpError(e.message); } finally { setSmtpSaving(false); }
   }
 
+  async function handleConnectQbo() {
+    setIntegrationsError(''); setIntegrationsMsg(''); setOauthLoading(true);
+    try {
+      const { url } = await api.gl.oauthConnect('qbo');
+      window.location.href = url;
+    } catch (e: any) { setIntegrationsError(e.message); setOauthLoading(false); }
+  }
+
+  async function handleConnectXero() {
+    setIntegrationsError(''); setIntegrationsMsg(''); setOauthLoading(true);
+    try {
+      const { url } = await api.gl.oauthConnect('xero');
+      window.location.href = url;
+    } catch (e: any) { setIntegrationsError(e.message); setOauthLoading(false); }
+  }
+
+  async function handleDisconnectQbo() {
+    setIntegrationsError(''); setIntegrationsMsg('');
+    try {
+      await api.gl.oauthDisconnect('qbo');
+      setOauthStatus((s) => ({ ...s, qbo: false, qboRealmId: undefined }));
+      setIntegrationsMsg('QuickBooks Online disconnected.');
+    } catch (e: any) { setIntegrationsError(e.message); }
+  }
+
+  async function handleDisconnectXero() {
+    setIntegrationsError(''); setIntegrationsMsg('');
+    try {
+      await api.gl.oauthDisconnect('xero');
+      setOauthStatus((s) => ({ ...s, xero: false, xeroTenantId: undefined }));
+      setIntegrationsMsg('Xero disconnected.');
+    } catch (e: any) { setIntegrationsError(e.message); }
+  }
+
   const successStyle: React.CSSProperties = { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.75rem', color: '#15803d', fontSize: '0.875rem', marginTop: '1rem' };
   const errorStyle: React.CSSProperties = { background: COLORS.accentRedLight, border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', color: COLORS.accentRedDark, fontSize: '0.875rem', marginTop: '1rem' };
   const btnPrimary: React.CSSProperties = { padding: '0.625rem 1.25rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem' };
+  const btnDanger: React.CSSProperties = { padding: '0.5rem 1rem', background: 'transparent', color: COLORS.accentRedDark, border: `1px solid #fecaca`, borderRadius: '6px', cursor: 'pointer', fontWeight: 500, fontSize: '0.875rem' };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '720px' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary, marginBottom: '1.5rem' }}>Settings</h1>
-      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${COLORS.border}`, marginBottom: '1.5rem' }}>
-        {(['branding', 'email', 'org', 'password'] as Tab[]).map((t) => (
+      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${COLORS.border}`, marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {(['branding', 'email', 'integrations', 'org', 'password'] as Tab[]).map((t) => (
           <button key={t} style={tabStyle(activeTab === t)} onClick={() => setActiveTab(t)}>
-            {t === 'branding' ? 'Branding' : t === 'email' ? 'Email / SMTP' : t === 'org' ? 'System Info' : 'Change Password'}
+            {t === 'branding' ? 'Branding' : t === 'email' ? 'Email / SMTP' : t === 'integrations' ? 'Integrations' : t === 'org' ? 'System Info' : 'Change Password'}
           </button>
         ))}
       </div>
@@ -200,6 +268,90 @@ export default function SettingsPage() {
             </div>
           </div>
         </form>
+      )}
+
+      {activeTab === 'integrations' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={card}>
+            <h2 style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem', color: COLORS.textPrimary }}>GL Integrations</h2>
+            <p style={{ fontSize: '0.8125rem', color: COLORS.textSecondary, marginBottom: '1.5rem', marginTop: '0.25rem' }}>
+              Connect your accounting platform to automatically post approved invoices as bills or AP invoices. OAuth tokens are stored securely per organization.
+            </p>
+
+            {integrationsMsg && <div style={successStyle}>{integrationsMsg}</div>}
+            {integrationsError && <div style={errorStyle}>{integrationsError}</div>}
+
+            {/* QuickBooks Online */}
+            <div style={{ border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '1.25rem', marginBottom: '1rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: COLORS.textPrimary }}>QuickBooks Online</span>
+                    {oauthStatus.qbo ? (
+                      <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, padding: '0.125rem 0.5rem', borderRadius: '999px', border: '1px solid #bbf7d0' }}>Connected</span>
+                    ) : (
+                      <span style={{ background: COLORS.accentRedLight, color: COLORS.accentRedDark, fontSize: '0.75rem', fontWeight: 600, padding: '0.125rem 0.5rem', borderRadius: '999px', border: '1px solid #fecaca' }}>Not connected</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: COLORS.textSecondary, margin: 0 }}>
+                    Posts approved invoices as Bills in QuickBooks Online using the Accounting API.
+                  </p>
+                  {oauthStatus.qbo && oauthStatus.qboRealmId && (
+                    <p style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                      Realm ID: {oauthStatus.qboRealmId}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '1rem' }}>
+                  {oauthStatus.qbo ? (
+                    <button onClick={handleDisconnectQbo} style={btnDanger}>Disconnect</button>
+                  ) : (
+                    <button onClick={handleConnectQbo} disabled={oauthLoading} style={btnPrimary}>
+                      {oauthLoading ? 'Redirecting...' : 'Connect QuickBooks'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Xero */}
+            <div style={{ border: `1px solid ${COLORS.border}`, borderRadius: '8px', padding: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: COLORS.textPrimary }}>Xero</span>
+                    {oauthStatus.xero ? (
+                      <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.75rem', fontWeight: 600, padding: '0.125rem 0.5rem', borderRadius: '999px', border: '1px solid #bbf7d0' }}>Connected</span>
+                    ) : (
+                      <span style={{ background: COLORS.accentRedLight, color: COLORS.accentRedDark, fontSize: '0.75rem', fontWeight: 600, padding: '0.125rem 0.5rem', borderRadius: '999px', border: '1px solid #fecaca' }}>Not connected</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: COLORS.textSecondary, margin: 0 }}>
+                    Posts approved invoices as Accounts Payable invoices in Xero using the Accounting API.
+                  </p>
+                  {oauthStatus.xero && oauthStatus.xeroTenantId && (
+                    <p style={{ fontSize: '0.75rem', color: COLORS.textMuted, marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                      Tenant ID: {oauthStatus.xeroTenantId}
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '1rem' }}>
+                  {oauthStatus.xero ? (
+                    <button onClick={handleDisconnectXero} style={btnDanger}>Disconnect</button>
+                  ) : (
+                    <button onClick={handleConnectXero} disabled={oauthLoading} style={btnPrimary}>
+                      {oauthLoading ? 'Redirecting...' : 'Connect Xero'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '0.75rem 1rem', background: '#fef9c3', borderRadius: '6px', border: '1px solid #fde68a', fontSize: '0.8125rem', color: COLORS.accentAmberDark, marginTop: '1rem' }}>
+              Configure <code style={{ fontFamily: 'monospace' }}>QBO_CLIENT_ID</code>, <code style={{ fontFamily: 'monospace' }}>QBO_CLIENT_SECRET</code>, <code style={{ fontFamily: 'monospace' }}>XERO_CLIENT_ID</code>, and <code style={{ fontFamily: 'monospace' }}>XERO_CLIENT_SECRET</code> environment variables before connecting.
+            </div>
+          </div>
+        </div>
       )}
 
       {activeTab === 'org' && (

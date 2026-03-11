@@ -114,6 +114,11 @@ export const api = {
       apiFetch<any>(`/gl/export-jobs/trigger/${invoiceId}?targetSystem=${targetSystem}`, { method: 'POST' }),
     retry: (id: string) => apiFetch<any>(`/gl/export-jobs/${id}/retry`, { method: 'POST' }),
   },
+  gl: {
+    oauthStatus: () => apiFetch<{ qbo: boolean; xero: boolean; qboRealmId?: string; xeroTenantId?: string }>('/gl/oauth/status'),
+    oauthConnect: (provider: 'qbo' | 'xero') => apiFetch<{ url: string }>(`/gl/oauth/${provider}/connect`),
+    oauthDisconnect: (provider: 'qbo' | 'xero') => apiFetch<void>(`/gl/oauth/${provider}`, { method: 'DELETE' }),
+  },
   requisitions: {
     list: () => apiFetch<any[]>('/requisitions'),
     get: (id: string) => apiFetch<any>(`/requisitions/${id}`),
@@ -252,5 +257,10 @@ export const api = {
     getBranding: () => apiFetch<Record<string, string>>('/settings/branding'),
     updateBranding: (data: unknown) => apiFetch<any>('/settings/branding', { method: 'PUT', body: JSON.stringify(data) }),
     updateSmtp: (data: unknown) => apiFetch<any>('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  gl: {
+    oauthStatus: () => apiFetch<{ qbo: boolean; xero: boolean; qboRealmId?: string; xeroTenantId?: string }>('/gl/oauth/status'),
+    oauthConnect: (system: 'qbo' | 'xero') => apiFetch<{ url: string }>(`/gl/oauth/${system}/connect`),
+    oauthDisconnect: (system: 'qbo' | 'xero') => apiFetch<void>(`/gl/oauth/${system}`, { method: 'DELETE' }),
   },
 };

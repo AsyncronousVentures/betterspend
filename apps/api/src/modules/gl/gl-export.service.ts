@@ -6,6 +6,8 @@ import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { glExportJobs, invoices } from '@betterspend/db';
 import { GlMappingsService } from './gl-mappings.service';
+import { OAuthService } from './oauth.service';
+import axios from 'axios';
 
 export type GlTargetSystem = 'qbo' | 'xero';
 
@@ -41,6 +43,7 @@ export class GlExportService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly glMappingsService: GlMappingsService,
+    private readonly oauthService: OAuthService,
     @InjectQueue('gl-export') private readonly glQueue: Queue,
   ) {}
 
@@ -155,18 +158,140 @@ export class GlExportService {
         return;
       }
 
-      // In production this would call QBO/Xero API. For now, record the payload
-      // and mark as exported (the actual API call is wired in Phase 5b when OAuth is added).
-      const externalId = `${targetSystem.toUpperCase()}-PENDING-${invoice.internalNumber}`;
+      // Attempt actual API call; fall back to PENDING placeholder if no tokens configured
+      const externalId = await this.sendToExternalSystem(organizationId, targetSystem, payload, job.id);
       await this.markJob(job.id, 'exported', null, payload, externalId);
 
       this.logger.log(
-        `GL export queued for invoice ${invoice.internalNumber} → ${targetSystem} (${exportLines.length} lines, ${unmappedAccounts.length} unmapped)`,
+        `GL export complete for invoice ${invoice.internalNumber} → ${targetSystem} (externalId=${externalId})`,
       );
     } catch (err: unknown) {
       await this.markJob(job.id, 'failed', String(err), null, null);
       throw err;
     }
+  }
+
+  /**
+   * Sends the export payload to the external GL system (QBO or Xero).
+   * Returns the external record ID assigned by the remote API.
+   * If OAuth tokens are not configured, returns a PENDING placeholder so the
+   * job still records a useful state rather than failing.
+   */
+  private async sendToExternalSystem(
+    organizationId: string,
+    targetSystem: GlTargetSystem,
+    payload: GlExportPayload,
+    jobId: string,
+  ): Promise<string> {
+    if (targetSystem === 'qbo') {
+      return this.sendToQbo(organizationId, payload);
+    }
+    // targetSystem === 'xero'
+    return this.sendToXero(organizationId, payload);
+  }
+
+  private async sendToQbo(organizationId: string, payload: GlExportPayload): Promise<string> {
+    const tokens = await this.oauthService.getQboToken(organizationId);
+    if (!tokens) {
+      this.logger.warn(`QBO not connected for org ${organizationId}; using placeholder`);
+      return `QBO-PENDING-${payload.internalNumber}`;
+    }
+
+    const { accessToken, realmId } = tokens;
+    const baseUrl = process.env.QBO_API_URL || 'https://quickbooks.api.intuit.com';
+
+    // Map lines to QBO Bill line items
+    const lineItems = payload.lines
+      .filter((l) => !l.unmapped && l.externalAccountCode)
+      .map((l) => ({
+        Amount: l.totalPrice,
+        DetailType: 'AccountBasedExpenseLineDetail',
+        Description: l.description,
+        AccountBasedExpenseLineDetail: {
+          AccountRef: { value: l.externalAccountCode },
+        },
+      }));
+
+    if (lineItems.length === 0) {
+      return `QBO-SKIPPED-${payload.internalNumber}`;
+    }
+
+    const billBody = {
+      VendorRef: { name: payload.vendorName },
+      TxnDate: payload.invoiceDate.split('T')[0],
+      DueDate: payload.dueDate ? payload.dueDate.split('T')[0] : undefined,
+      DocNumber: payload.invoiceNumber,
+      CurrencyRef: { value: payload.currency },
+      Line: lineItems,
+    };
+
+    const res = await axios.post<{ Bill: { Id: string } }>(
+      `${baseUrl}/v3/company/${realmId}/bill`,
+      billBody,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    const qboId = res.data?.Bill?.Id ?? `QBO-${payload.internalNumber}`;
+    this.logger.log(`QBO Bill created: ${qboId} for invoice ${payload.internalNumber}`);
+    return `QBO-${qboId}`;
+  }
+
+  private async sendToXero(organizationId: string, payload: GlExportPayload): Promise<string> {
+    const tokens = await this.oauthService.getXeroToken(organizationId);
+    if (!tokens) {
+      this.logger.warn(`Xero not connected for org ${organizationId}; using placeholder`);
+      return `XERO-PENDING-${payload.internalNumber}`;
+    }
+
+    const { accessToken, tenantId } = tokens;
+
+    // Map lines to Xero invoice line items
+    const lineItems = payload.lines
+      .filter((l) => !l.unmapped && l.externalAccountCode)
+      .map((l) => ({
+        Description: l.description,
+        Quantity: l.quantity,
+        UnitAmount: l.unitPrice,
+        AccountCode: l.externalAccountCode,
+      }));
+
+    if (lineItems.length === 0) {
+      return `XERO-SKIPPED-${payload.internalNumber}`;
+    }
+
+    const invoiceBody = {
+      Type: 'ACCPAY',
+      Contact: { Name: payload.vendorName },
+      Date: payload.invoiceDate.split('T')[0],
+      DueDate: payload.dueDate ? payload.dueDate.split('T')[0] : undefined,
+      InvoiceNumber: payload.invoiceNumber,
+      CurrencyCode: payload.currency,
+      LineItems: lineItems,
+      Status: 'AUTHORISED',
+    };
+
+    const res = await axios.post<{ Invoices: Array<{ InvoiceID: string }> }>(
+      'https://api.xero.com/api.xro/2.0/Invoices',
+      { Invoices: [invoiceBody] },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'xero-tenant-id': tenantId,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    const xeroId = res.data?.Invoices?.[0]?.InvoiceID ?? `XERO-${payload.internalNumber}`;
+    this.logger.log(`Xero Invoice created: ${xeroId} for invoice ${payload.internalNumber}`);
+    return `XERO-${xeroId}`;
   }
 
   async findJobsForInvoice(invoiceId: string) {
@@ -223,7 +348,8 @@ export class GlExportService {
       };
       const allUnmapped = exportLines.length > 0 && exportLines.every((l) => l.unmapped);
       if (allUnmapped) { await this.markJobById(jobId, 'skipped', `No GL mappings found for ${targetSystem}`, payload, null); return; }
-      const externalId = `${targetSystem.toUpperCase()}-PENDING-${invoice.internalNumber}`;
+
+      const externalId = await this.sendToExternalSystem(organizationId, targetSystem, payload, jobId);
       await this.markJobById(jobId, 'exported', null, payload, externalId);
     } catch (err: unknown) {
       await this.markJobById(jobId, 'failed', String(err), null, null);

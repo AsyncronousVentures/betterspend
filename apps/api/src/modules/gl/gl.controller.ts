@@ -1,11 +1,16 @@
 import {
-  Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { GlMappingsService, CreateGlMappingInput, UpdateGlMappingInput } from './gl-mappings.service';
 import { GlExportService } from './gl-export.service';
+import { OAuthService } from './oauth.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
+
+const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
 @ApiTags('gl')
 @Roles('finance', 'admin')
@@ -14,6 +19,7 @@ export class GlController {
   constructor(
     private readonly glMappingsService: GlMappingsService,
     private readonly glExportService: GlExportService,
+    private readonly oauthService: OAuthService,
   ) {}
 
   // ── Mappings ───────────────────────────────────────────────────────────────
@@ -81,5 +87,96 @@ export class GlController {
   ) {
     this.glExportService.enqueue(orgId, invoiceId, targetSystem);
     return { queued: true, invoiceId, targetSystem };
+  }
+
+  // ── OAuth — Connection Status ───────────────────────────────────────────────
+
+  @Get('oauth/status')
+  @ApiOperation({ summary: 'Get QBO and Xero connection status' })
+  getOAuthStatus(@CurrentOrgId() orgId: string) {
+    return this.oauthService.getConnectionStatus(orgId);
+  }
+
+  // ── OAuth — QuickBooks Online ───────────────────────────────────────────────
+
+  @Get('oauth/qbo/connect')
+  @ApiOperation({ summary: 'Get QBO OAuth authorize URL' })
+  getQboConnectUrl(@CurrentOrgId() orgId: string) {
+    const url = this.oauthService.getQboAuthUrl(orgId);
+    return { url };
+  }
+
+  @Get('oauth/qbo/callback')
+  @Public()
+  @ApiOperation({ summary: 'QBO OAuth callback — exchanges code for tokens' })
+  async qboCallback(
+    @Query('code') code: string,
+    @Query('realmId') realmId: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    const webUrl = process.env.WEB_URL || 'http://localhost:3100';
+    try {
+      let organizationId = DEMO_ORG_ID;
+      try {
+        const parsed = JSON.parse(Buffer.from(state, 'base64').toString('utf8')) as { organizationId?: string };
+        if (parsed.organizationId) organizationId = parsed.organizationId;
+      } catch {
+        // state parse failure — fall back to demo org
+      }
+      await this.oauthService.exchangeQboCode(organizationId, code, realmId);
+      res.redirect(`${webUrl}/settings?tab=integrations&connected=qbo`);
+    } catch (err) {
+      const message = encodeURIComponent(String(err));
+      res.redirect(`${webUrl}/settings?tab=integrations&error=qbo&message=${message}`);
+    }
+  }
+
+  @Delete('oauth/qbo')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Disconnect QBO' })
+  async disconnectQbo(@CurrentOrgId() orgId: string) {
+    await this.oauthService.disconnectQbo(orgId);
+  }
+
+  // ── OAuth — Xero ────────────────────────────────────────────────────────────
+
+  @Get('oauth/xero/connect')
+  @ApiOperation({ summary: 'Get Xero OAuth authorize URL' })
+  getXeroConnectUrl(@CurrentOrgId() orgId: string) {
+    const url = this.oauthService.getXeroAuthUrl(orgId);
+    return { url };
+  }
+
+  @Get('oauth/xero/callback')
+  @Public()
+  @ApiOperation({ summary: 'Xero OAuth callback — exchanges code for tokens' })
+  async xeroCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    const webUrl = process.env.WEB_URL || 'http://localhost:3100';
+    try {
+      let organizationId = DEMO_ORG_ID;
+      try {
+        const parsed = JSON.parse(Buffer.from(state, 'base64').toString('utf8')) as { organizationId?: string };
+        if (parsed.organizationId) organizationId = parsed.organizationId;
+      } catch {
+        // state parse failure — fall back to demo org
+      }
+      await this.oauthService.exchangeXeroCode(organizationId, code);
+      res.redirect(`${webUrl}/settings?tab=integrations&connected=xero`);
+    } catch (err) {
+      const message = encodeURIComponent(String(err));
+      res.redirect(`${webUrl}/settings?tab=integrations&error=xero&message=${message}`);
+    }
+  }
+
+  @Delete('oauth/xero')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Disconnect Xero' })
+  async disconnectXero(@CurrentOrgId() orgId: string) {
+    await this.oauthService.disconnectXero(orgId);
   }
 }
