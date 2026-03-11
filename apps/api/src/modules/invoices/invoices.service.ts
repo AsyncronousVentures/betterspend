@@ -2,11 +2,12 @@ import { Injectable, Inject, NotFoundException, BadRequestException } from '@nes
 import { eq, and } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
-import { invoices, invoiceLines } from '@betterspend/db';
+import { invoices, invoiceLines, purchaseOrders, requisitions } from '@betterspend/db';
 import { SequenceService } from '../../common/services/sequence.service';
 import { MatchingService } from './matching.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { GlExportService } from '../gl/gl-export.service';
+import { BudgetsService } from '../budgets/budgets.service';
 
 export interface CreateInvoiceInput {
   purchaseOrderId?: string;
@@ -33,6 +34,7 @@ export class InvoicesService {
     private readonly matchingService: MatchingService,
     private readonly webhookEvents: WebhookEventService,
     private readonly glExport: GlExportService,
+    private readonly budgets: BudgetsService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -110,7 +112,12 @@ export class InvoicesService {
 
     const created = await this.findOne(invoiceId, organizationId);
     if (input.purchaseOrderId) {
-      this.webhookEvents.emit(organizationId, 'invoice.matched', { invoice: created });
+      const matchSt = (created as any).matchStatus;
+      if (matchSt === 'exception') {
+        this.webhookEvents.emit(organizationId, 'invoice.exception', { invoice: created });
+      } else {
+        this.webhookEvents.emit(organizationId, 'invoice.matched', { invoice: created });
+      }
     }
     return created;
   }
@@ -131,6 +138,27 @@ export class InvoicesService {
     const approved = await this.findOne(id, organizationId);
     this.webhookEvents.emit(organizationId, 'invoice.approved', { invoice: approved });
     this.glExport.enqueue(organizationId, id, 'qbo');
+
+    // Auto-track budget spend: resolve department via PO → Requisition
+    if ((approved as any).purchaseOrderId) {
+      try {
+        const po = await this.db.query.purchaseOrders.findFirst({
+          where: (p, { eq }) => eq(p.id, (approved as any).purchaseOrderId),
+        });
+        if (po?.requisitionId) {
+          const req = await this.db.query.requisitions.findFirst({
+            where: (r, { eq }) => eq(r.id, po.requisitionId!),
+          });
+          if (req?.departmentId) {
+            const fiscalYear = new Date().getFullYear();
+            await this.budgets.recordSpend(organizationId, req.departmentId, parseFloat((approved as any).totalAmount ?? '0'), fiscalYear);
+          }
+        }
+      } catch {
+        // Budget tracking is best-effort; never fail the approval
+      }
+    }
+
     return approved;
   }
 }

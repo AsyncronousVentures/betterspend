@@ -3,10 +3,14 @@ import { eq, and } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { approvalRules, approvalRuleSteps, approvalRequests, approvalActions, requisitions, purchaseOrders } from '@betterspend/db';
+import { WebhookEventService } from '../webhooks/webhook-event.service';
 
 @Injectable()
 export class ApprovalEngineService {
-  constructor(@Inject(DB_TOKEN) private readonly db: Db) {}
+  constructor(
+    @Inject(DB_TOKEN) private readonly db: Db,
+    private readonly webhookEvents: WebhookEventService,
+  ) {}
 
   // Evaluate a JSONB condition expression against an entity object
   evaluateCondition(condition: any, entity: Record<string, any>): boolean {
@@ -90,10 +94,12 @@ export class ApprovalEngineService {
         await this.db.update(requisitions)
           .set({ status: 'approved', updatedAt: new Date() })
           .where(eq(requisitions.id, entityId));
+        this.webhookEvents.emit(organizationId, 'requisition.approved', { requisitionId: entityId, autoApproved: true });
       } else {
         await this.db.update(purchaseOrders)
           .set({ status: 'approved', updatedAt: new Date() })
           .where(eq(purchaseOrders.id, entityId));
+        this.webhookEvents.emit(organizationId, 'po.approved', { purchaseOrderId: entityId, autoApproved: true });
       }
       return { autoApproved: true, rule: null };
     }
@@ -123,6 +129,13 @@ export class ApprovalEngineService {
       });
 
       return req.id;
+    });
+
+    this.webhookEvents.emit(organizationId, 'approval.requested', {
+      requestId,
+      entityType,
+      entityId,
+      ruleName: rule.name,
     });
 
     return { autoApproved: false, rule, requestId };
@@ -161,6 +174,7 @@ export class ApprovalEngineService {
     actorId: string,
     action: 'approve' | 'reject',
     comment?: string,
+    organizationId?: string,
   ) {
     const approvalReq = await this.getRequest(requestId);
 
@@ -190,7 +204,7 @@ export class ApprovalEngineService {
         .set({ status: 'rejected', updatedAt: new Date() })
         .where(eq(approvalRequests.id, requestId));
 
-      await this.updateEntityStatus(approvalReq.approvableType, approvalReq.approvableId, 'rejected');
+      await this.updateEntityStatus(approvalReq.approvableType, approvalReq.approvableId, 'rejected', organizationId);
       return { status: 'rejected' };
     }
 
@@ -216,7 +230,7 @@ export class ApprovalEngineService {
         .set({ status: 'approved', updatedAt: new Date() })
         .where(eq(approvalRequests.id, requestId));
 
-      await this.updateEntityStatus(approvalReq.approvableType, approvalReq.approvableId, 'approved');
+      await this.updateEntityStatus(approvalReq.approvableType, approvalReq.approvableId, 'approved', organizationId);
       return { status: 'approved' };
     }
   }
@@ -225,15 +239,28 @@ export class ApprovalEngineService {
     entityType: string,
     entityId: string,
     status: 'approved' | 'rejected',
+    organizationId?: string,
   ) {
     if (entityType === 'requisition') {
       await this.db.update(requisitions)
         .set({ status, updatedAt: new Date() })
         .where(eq(requisitions.id, entityId));
+      if (organizationId) {
+        this.webhookEvents.emit(organizationId, status === 'approved' ? 'requisition.approved' : 'requisition.rejected', { requisitionId: entityId });
+      }
     } else if (entityType === 'purchase_order') {
       await this.db.update(purchaseOrders)
         .set({ status, updatedAt: new Date() })
         .where(eq(purchaseOrders.id, entityId));
+      if (organizationId) {
+        this.webhookEvents.emit(organizationId, status === 'approved' ? 'po.approved' : 'po.rejected', { purchaseOrderId: entityId });
+      }
+    }
+    if (organizationId) {
+      this.webhookEvents.emit(organizationId, status === 'approved' ? 'approval.approved' : 'approval.rejected', {
+        entityType,
+        entityId,
+      });
     }
   }
 }

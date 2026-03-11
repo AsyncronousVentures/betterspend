@@ -30,8 +30,9 @@ export class ApprovalsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { comment?: string },
     @CurrentUserId() userId: string,
+    @CurrentOrgId() orgId: string,
   ) {
-    return this.approvalEngineService.processAction(id, userId, 'approve', body?.comment);
+    return this.approvalEngineService.processAction(id, userId, 'approve', body?.comment, orgId);
   }
 
   @Post(':id/reject')
@@ -41,7 +42,8 @@ export class ApprovalsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { comment?: string },
     @CurrentUserId() userId: string,
+    @CurrentOrgId() orgId: string,
   ) {
-    return this.approvalEngineService.processAction(id, userId, 'reject', body?.comment);
+    return this.approvalEngineService.processAction(id, userId, 'reject', body?.comment, orgId);
   }
 }
