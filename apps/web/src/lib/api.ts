@@ -276,4 +276,11 @@ export const api = {
     updateBranding: (data: unknown) => apiFetch<any>('/settings/branding', { method: 'PUT', body: JSON.stringify(data) }),
     updateSmtp: (data: unknown) => apiFetch<any>('/settings/smtp', { method: 'PUT', body: JSON.stringify(data) }),
   },
+  vendorPortal: {
+    sendAccess: (vendorId: string) => apiFetch<{ success: boolean }>('/vendor-portal/access', { method: 'POST', body: JSON.stringify({ vendorId }) }),
+    dashboard: (token: string) => apiFetch<any>(`/vendor-portal/dashboard?token=${encodeURIComponent(token)}`),
+    getPo: (poId: string, token: string) => apiFetch<any>(`/vendor-portal/po/${poId}?token=${encodeURIComponent(token)}`),
+    submitInvoice: (token: string, data: unknown) => apiFetch<any>(`/vendor-portal/invoice?token=${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify(data) }),
+    listInvoices: (token: string) => apiFetch<any[]>(`/vendor-portal/invoices?token=${encodeURIComponent(token)}`),
+  },
 };
