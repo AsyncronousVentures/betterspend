@@ -322,13 +322,6 @@ export const api = {
     list: (params?: { limit?: number }) => apiFetch<any[]>('/supplier-scorecard' + (params?.limit ? `?limit=${params.limit}` : '')),
     get: (vendorId: string) => apiFetch<any>(`/supplier-scorecard/${vendorId}`),
   },
-  vendorPortal: {
-    sendAccess: (vendorId: string) => apiFetch<{ success: boolean }>('/vendor-portal/access', { method: 'POST', body: JSON.stringify({ vendorId }) }),
-    dashboard: (token: string) => apiFetch<any>(`/vendor-portal/dashboard?token=${encodeURIComponent(token)}`),
-    getPo: (poId: string, token: string) => apiFetch<any>(`/vendor-portal/po/${poId}?token=${encodeURIComponent(token)}`),
-    submitInvoice: (token: string, data: unknown) => apiFetch<any>(`/vendor-portal/invoice?token=${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify(data) }),
-    listInvoices: (token: string) => apiFetch<any[]>(`/vendor-portal/invoices?token=${encodeURIComponent(token)}`),
-  },
   approvalDelegations: {
     list: () => apiFetch<any[]>('/approval-delegations'),
     my: () => apiFetch<any[]>('/approval-delegations/my'),

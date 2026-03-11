@@ -17,7 +17,6 @@ export default function VendorDetailPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState<any>({});
   const [txns, setTxns] = useState<{ invoices: any[]; purchaseOrders: any[] } | null>(null);
-  const [sendingAccess, setSendingAccess] = useState(false);
 
   useEffect(() => {
     api.vendors.get(id).then((v) => {
@@ -80,18 +79,6 @@ export default function VendorDetailPage() {
     }
   }
 
-  async function handleSendPortalAccess() {
-    setSendingAccess(true);
-    try {
-      await api.vendorPortal.sendAccess(id);
-      toast('Portal access link sent to vendor.', 'success');
-    } catch (e: any) {
-      toast(e.message || 'Failed to send access link.', 'error');
-    } finally {
-      setSendingAccess(false);
-    }
-  }
-
   const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
     active: { bg: '#dcfce7', text: '#15803d' },
     inactive: { bg: COLORS.hoverBg, text: COLORS.textSecondary },
@@ -131,19 +118,19 @@ export default function VendorDetailPage() {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 onClick={handleSendPortalAccess}
-                disabled={sendingAccess}
+                disabled={portalSending}
                 style={{
                   padding: '0.5rem 1rem',
                   background: '#f0fdf4',
                   color: '#15803d',
                   border: '1px solid #bbf7d0',
                   borderRadius: '6px',
-                  cursor: sendingAccess ? 'not-allowed' : 'pointer',
+                  cursor: portalSending ? 'not-allowed' : 'pointer',
                   fontWeight: 500,
                   fontSize: '0.875rem',
                 }}
               >
-                {sendingAccess ? 'Sending...' : 'Send Portal Access Link'}
+                {portalSending ? 'Sending...' : 'Send Portal Access Link'}
               </button>
               <button onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>
                 Edit
