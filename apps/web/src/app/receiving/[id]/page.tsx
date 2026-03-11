@@ -1,6 +1,8 @@
-import Link from 'next/link';
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { api } from '../../../lib/api';
 
 interface GRNLine {
   id: string;
@@ -18,37 +20,9 @@ interface GRN {
   status: string;
   receivedDate: string;
   notes: string | null;
-  purchaseOrder: {
-    id: string;
-    number: string;
-    vendor: { name: string } | null;
-  } | null;
+  purchaseOrder: { id: string; number: string; vendor: { name: string } | null } | null;
   lines: GRNLine[];
   createdAt: string;
-}
-
-async function getGRN(id: string): Promise<GRN | null> {
-  try {
-    const res = await fetch(`${API_URL}/receiving/${id}`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { background: string; color: string }> = {
-    confirmed: { background: '#d1fae5', color: '#065f46' },
-    draft: { background: '#f3f4f6', color: '#374151' },
-    cancelled: { background: '#fee2e2', color: '#991b1b' },
-  };
-  const style = colors[status] ?? { background: '#f3f4f6', color: '#374151' };
-  return (
-    <span style={{ ...style, padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600 }}>
-      {status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-    </span>
-  );
 }
 
 function Field({ label, value }: { label: string; value: string | null }) {
@@ -60,37 +34,67 @@ function Field({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-export default async function GRNDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const grn = await getGRN(id);
+export default function GRNDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState('');
+  const [grn, setGrn] = useState<GRN | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState('');
 
-  if (!grn) {
-    return (
-      <div style={{ padding: '2rem', color: '#6b7280' }}>
-        GRN not found. <Link href="/receiving" style={{ color: '#2563eb' }}>Back to list</Link>
-      </div>
-    );
+  useEffect(() => {
+    params.then(({ id: pid }) => {
+      setId(pid);
+      api.receiving.get(pid)
+        .then((data) => setGrn(data))
+        .catch(() => setGrn(null))
+        .finally(() => setLoading(false));
+    });
+  }, [params]);
+
+  async function confirmGRN() {
+    setError('');
+    setConfirming(true);
+    try {
+      await api.receiving.confirm(id);
+      const updated = await api.receiving.get(id);
+      setGrn(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Confirm failed');
+    } finally {
+      setConfirming(false);
+    }
   }
+
+  if (loading) return <div style={{ padding: '2rem', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>;
+  if (!grn) return (
+    <div style={{ padding: '2rem', color: '#6b7280' }}>
+      GRN not found. <Link href="/receiving" style={{ color: '#2563eb' }}>Back to list</Link>
+    </div>
+  );
 
   const totalReceived = grn.lines.reduce((s, l) => s + parseFloat(l.quantityReceived), 0);
   const totalRejected = grn.lines.reduce((s, l) => s + parseFloat(l.quantityRejected), 0);
+  const statusColors: Record<string, { background: string; color: string }> = {
+    confirmed: { background: '#d1fae5', color: '#065f46' },
+    draft: { background: '#f3f4f6', color: '#374151' },
+    cancelled: { background: '#fee2e2', color: '#991b1b' },
+  };
+  const statusStyle = statusColors[grn.status] ?? { background: '#f3f4f6', color: '#374151' };
 
   return (
     <div style={{ padding: '2rem', maxWidth: '900px' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
           <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-            <Link href="/receiving" style={{ color: '#6b7280', textDecoration: 'none' }}>Goods Receipts</Link>
-            {' / '}
-            {grn.number}
+            <Link href="/receiving" style={{ color: '#6b7280', textDecoration: 'none' }}>Goods Receipts</Link> / {grn.number}
           </div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>{grn.number}</h1>
         </div>
-        <StatusBadge status={grn.status} />
+        <span style={{ ...statusStyle, padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600 }}>
+          {grn.status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+        </span>
       </div>
 
-      {/* Meta */}
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Receipt Information</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -99,7 +103,7 @@ export default async function GRNDetailPage({ params }: { params: Promise<{ id: 
           <Field label="Vendor" value={grn.purchaseOrder?.vendor?.name ?? null} />
           <Field label="Received Date" value={new Date(grn.receivedDate).toLocaleDateString()} />
           <Field label="Total Received" value={String(totalReceived)} />
-          <Field label="Total Rejected" value={totalRejected > 0 ? String(totalRejected) : '0'} />
+          <Field label="Total Rejected" value={String(totalRejected)} />
         </div>
         {grn.notes && (
           <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6' }}>
@@ -108,8 +112,7 @@ export default async function GRNDetailPage({ params }: { params: Promise<{ id: 
         )}
       </div>
 
-      {/* Lines */}
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.5rem' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>Received Lines</h2>
         </div>
@@ -128,15 +131,23 @@ export default async function GRNDetailPage({ params }: { params: Promise<{ id: 
                 <td style={{ padding: '0.875rem 1rem' }}>{line.poLine?.description ?? '—'}</td>
                 <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{line.poLine?.quantity ?? '—'}</td>
                 <td style={{ padding: '0.875rem 1rem', color: '#065f46', fontWeight: 600 }}>{line.quantityReceived}</td>
-                <td style={{ padding: '0.875rem 1rem', color: parseFloat(line.quantityRejected) > 0 ? '#991b1b' : '#6b7280' }}>
-                  {line.quantityRejected}
-                </td>
+                <td style={{ padding: '0.875rem 1rem', color: parseFloat(line.quantityRejected) > 0 ? '#991b1b' : '#6b7280' }}>{line.quantityRejected}</td>
                 <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{line.rejectionReason ?? '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {grn.status === 'draft' && (
+        <div>
+          <button onClick={confirmGRN} disabled={confirming}
+            style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: confirming ? 'not-allowed' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
+            {confirming ? 'Confirming…' : 'Confirm Receipt'}
+          </button>
+          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
+        </div>
+      )}
     </div>
   );
 }

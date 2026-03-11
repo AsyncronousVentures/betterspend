@@ -1,13 +1,13 @@
-import Link from 'next/link';
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { api } from '../../../lib/api';
 
 interface MatchResult {
   id: string;
   priceMatch: boolean;
   quantityMatch: boolean;
-  priceVariance: string;
-  quantityVariance: string;
   variancePct: string;
   status: string;
 }
@@ -36,21 +36,10 @@ interface Invoice {
   taxAmount: string;
   totalAmount: string;
   currency: string;
-  matchDetails: any;
   vendor: { name: string } | null;
   purchaseOrder: { id: string; number: string } | null;
   lines: InvoiceLine[];
   approvedAt: string | null;
-}
-
-async function getInvoice(id: string): Promise<Invoice | null> {
-  try {
-    const res = await fetch(`${API_URL}/invoices/${id}`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
 }
 
 const STATUS_COLORS: Record<string, { background: string; color: string }> = {
@@ -92,35 +81,66 @@ function formatCurrency(amount: string | number | null, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount));
 }
 
-function MatchIcon({ match }: { match: boolean }) {
-  return match
-    ? <span style={{ color: '#065f46', fontWeight: 700 }}>✓</span>
-    : <span style={{ color: '#991b1b', fontWeight: 700 }}>✗</span>;
-}
+export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [id, setId] = useState('');
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const invoice = await getInvoice(id);
+  useEffect(() => {
+    params.then(({ id: pid }) => {
+      setId(pid);
+      api.invoices.get(pid)
+        .then((data) => setInvoice(data))
+        .catch(() => setInvoice(null))
+        .finally(() => setLoading(false));
+    });
+  }, [params]);
 
-  if (!invoice) {
-    return (
-      <div style={{ padding: '2rem', color: '#6b7280' }}>
-        Invoice not found. <Link href="/invoices" style={{ color: '#2563eb' }}>Back to list</Link>
-      </div>
-    );
+  async function doApprove() {
+    setError('');
+    setActionLoading('approve');
+    try {
+      await api.invoices.approve(id);
+      const updated = await api.invoices.get(id);
+      setInvoice(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Approve failed');
+    } finally {
+      setActionLoading(null);
+    }
   }
+
+  async function doRerunMatch() {
+    setError('');
+    setActionLoading('match');
+    try {
+      await api.invoices.rerunMatch(id);
+      const updated = await api.invoices.get(id);
+      setInvoice(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Match failed');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  if (loading) return <div style={{ padding: '2rem', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>;
+  if (!invoice) return (
+    <div style={{ padding: '2rem', color: '#6b7280' }}>
+      Invoice not found. <Link href="/invoices" style={{ color: '#2563eb' }}>Back to list</Link>
+    </div>
+  );
 
   const hasExceptions = invoice.matchStatus === 'exception';
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
         <div>
           <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-            <Link href="/invoices" style={{ color: '#6b7280', textDecoration: 'none' }}>Invoices</Link>
-            {' / '}
-            {invoice.internalNumber}
+            <Link href="/invoices" style={{ color: '#6b7280', textDecoration: 'none' }}>Invoices</Link> / {invoice.internalNumber}
           </div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>{invoice.internalNumber}</h1>
           <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>Vendor invoice: {invoice.invoiceNumber}</div>
@@ -131,20 +151,16 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Exception banner */}
       {hasExceptions && (
         <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.25rem' }}>⚠️</span>
           <div>
             <div style={{ fontWeight: 600, color: '#991b1b', fontSize: '0.875rem' }}>3-Way Match Exceptions Detected</div>
-            <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '0.25rem' }}>
-              One or more lines have price or quantity variances outside tolerance. Finance review required before approval.
-            </div>
+            <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: '0.25rem' }}>One or more lines have price or quantity variances outside tolerance. Finance review required before approval.</div>
           </div>
         </div>
       )}
 
-      {/* Meta */}
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: '#111827' }}>Invoice Details</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
@@ -158,7 +174,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Lines with match results */}
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.5rem' }}>
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, color: '#111827' }}>Line Items & 3-Way Match</h2>
@@ -180,27 +195,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                   <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{line.lineNumber}</td>
                   <td style={{ padding: '0.875rem 1rem' }}>
                     <div>{line.description}</div>
-                    {line.poLine && (
-                      <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>
-                        PO: {line.poLine.description} @ ${line.poLine.unitPrice}
-                      </div>
-                    )}
+                    {line.poLine && <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>PO: {line.poLine.description} @ ${line.poLine.unitPrice}</div>}
                   </td>
                   <td style={{ padding: '0.875rem 1rem' }}>{line.quantity}</td>
                   <td style={{ padding: '0.875rem 1rem' }}>{formatCurrency(line.unitPrice, invoice.currency)}</td>
                   <td style={{ padding: '0.875rem 1rem', fontWeight: 500 }}>{formatCurrency(line.totalPrice, invoice.currency)}</td>
-                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
-                    {match ? <MatchIcon match={match.priceMatch} /> : '—'}
-                  </td>
-                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
-                    {match ? <MatchIcon match={match.quantityMatch} /> : '—'}
-                  </td>
-                  <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>
-                    {match ? `${parseFloat(match.variancePct).toFixed(1)}%` : '—'}
-                  </td>
-                  <td style={{ padding: '0.875rem 1rem' }}>
-                    {match ? <Badge label={match.status} colors={MATCH_COLORS[match.status] ?? MATCH_COLORS.unmatched} /> : '—'}
-                  </td>
+                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.priceMatch ? <span style={{ color: '#065f46', fontWeight: 700 }}>✓</span> : <span style={{ color: '#991b1b', fontWeight: 700 }}>✗</span>) : '—'}</td>
+                  <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>{match ? (match.quantityMatch ? <span style={{ color: '#065f46', fontWeight: 700 }}>✓</span> : <span style={{ color: '#991b1b', fontWeight: 700 }}>✗</span>) : '—'}</td>
+                  <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>{match ? `${parseFloat(match.variancePct).toFixed(1)}%` : '—'}</td>
+                  <td style={{ padding: '0.875rem 1rem' }}>{match ? <Badge label={match.status} colors={MATCH_COLORS[match.status] ?? MATCH_COLORS.unmatched} /> : '—'}</td>
                 </tr>
               );
             })}
@@ -208,31 +211,19 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </table>
       </div>
 
-      {/* Actions */}
       {invoice.status !== 'approved' && (
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <a
-            href={`/invoices/${invoice.id}/approve`}
-            style={{
-              background: hasExceptions ? '#d1d5db' : '#111827',
-              color: '#fff',
-              padding: '0.625rem 1.5rem',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              pointerEvents: hasExceptions ? 'none' : 'auto',
-              opacity: hasExceptions ? 0.5 : 1,
-            }}
-          >
-            Approve for Payment
-          </a>
-          <a
-            href={`${API_URL}/invoices/${invoice.id}/match`}
-            style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', color: '#374151', textDecoration: 'none' }}
-          >
-            Re-run Match
-          </a>
+        <div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={doApprove} disabled={hasExceptions || actionLoading !== null}
+              style={{ background: hasExceptions ? '#d1d5db' : '#111827', color: '#fff', border: 'none', padding: '0.625rem 1.5rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: hasExceptions || actionLoading ? 'not-allowed' : 'pointer', opacity: hasExceptions ? 0.5 : 1 }}>
+              {actionLoading === 'approve' ? 'Approving…' : 'Approve for Payment'}
+            </button>
+            <button onClick={doRerunMatch} disabled={actionLoading !== null}
+              style={{ padding: '0.625rem 1.5rem', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem', color: '#374151', background: '#fff', cursor: actionLoading ? 'not-allowed' : 'pointer' }}>
+              {actionLoading === 'match' ? 'Running…' : 'Re-run Match'}
+            </button>
+          </div>
+          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
         </div>
       )}
     </div>
