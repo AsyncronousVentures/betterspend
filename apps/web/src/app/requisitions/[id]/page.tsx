@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '../../../lib/api';
 
 interface RequisitionLine {
@@ -46,11 +47,18 @@ function formatCurrency(amount: string | number | null, currency = 'USD') {
 }
 
 export default function RequisitionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const [id, setId] = useState('');
   const [req, setReq] = useState<Requisition | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [poDialogOpen, setPoDialogOpen] = useState(false);
+  const [vendors, setVendors] = useState<{ id: string; name: string }[]>([]);
+  const [poVendorId, setPoVendorId] = useState('');
+  const [poPaymentTerms, setPoPaymentTerms] = useState('');
+  const [poSubmitting, setPoSubmitting] = useState(false);
+  const [poError, setPoError] = useState('');
 
   useEffect(() => {
     params.then(({ id: pid }) => {
@@ -61,6 +69,42 @@ export default function RequisitionDetailPage({ params }: { params: Promise<{ id
         .finally(() => setLoading(false));
     });
   }, [params]);
+
+  async function openPoDialog() {
+    if (vendors.length === 0) {
+      const data = await api.vendors.list().catch(() => []);
+      setVendors(data as any[]);
+      if ((data as any[]).length > 0) setPoVendorId((data as any[])[0].id);
+    }
+    setPoDialogOpen(true);
+  }
+
+  async function submitCreatePO() {
+    if (!poVendorId) { setPoError('Select a vendor.'); return; }
+    setPoError('');
+    setPoSubmitting(true);
+    try {
+      const lines = (req!.lines ?? []).map((l) => ({
+        description: l.description,
+        quantity: Number(l.qty) || 1,
+        unitOfMeasure: (l as any).uom || 'each',
+        unitPrice: Number(l.unitPrice) || 0,
+        requisitionLineId: l.id,
+      }));
+      const po = await api.purchaseOrders.create({
+        vendorId: poVendorId,
+        requisitionId: req!.id,
+        paymentTerms: poPaymentTerms || undefined,
+        currency: req!.currency,
+        lines,
+      }) as any;
+      router.push(`/purchase-orders/${po.id}`);
+    } catch (err) {
+      setPoError(err instanceof Error ? err.message : 'PO creation failed');
+    } finally {
+      setPoSubmitting(false);
+    }
+  }
 
   async function doAction(action: 'submit' | 'cancel') {
     setError('');
@@ -164,21 +208,65 @@ export default function RequisitionDetailPage({ params }: { params: Promise<{ id
         )}
       </div>
 
-      {(req.status === 'draft' || req.status === 'pending_approval') && (
-        <div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {req.status === 'draft' && (
-              <button onClick={() => doAction('submit')} disabled={actionLoading !== null}
-                style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-                {actionLoading === 'submit' ? 'Submitting…' : 'Submit for Approval'}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        {req.status === 'draft' && (
+          <button onClick={() => doAction('submit')} disabled={actionLoading !== null}
+            style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+            {actionLoading === 'submit' ? 'Submitting…' : 'Submit for Approval'}
+          </button>
+        )}
+        {req.status === 'approved' && (
+          <button onClick={openPoDialog}
+            style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+            Create Purchase Order
+          </button>
+        )}
+        {(req.status === 'draft' || req.status === 'pending_approval') && (
+          <button onClick={() => doAction('cancel')} disabled={actionLoading !== null}
+            style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+            {actionLoading === 'cancel' ? 'Cancelling…' : 'Cancel Requisition'}
+          </button>
+        )}
+      </div>
+      {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
+
+      {/* Create PO Dialog */}
+      {poDialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setPoDialogOpen(false); }}>
+          <div style={{ background: '#fff', borderRadius: '10px', padding: '1.75rem', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 700, color: '#111827' }}>Create Purchase Order</h2>
+            <p style={{ margin: '0 0 1.25rem', fontSize: '0.875rem', color: '#6b7280' }}>
+              Select a vendor to create a PO from {req.number}. All {req.lines?.length ?? 0} line items will be included.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem' }}>Vendor *</label>
+                <select value={poVendorId} onChange={(e) => setPoVendorId(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }}>
+                  <option value="">— Select vendor —</option>
+                  {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem' }}>Payment Terms</label>
+                <input value={poPaymentTerms} onChange={(e) => setPoPaymentTerms(e.target.value)}
+                  placeholder="e.g. Net 30"
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            {poError && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.8rem' }}>{poError}</div>}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setPoDialogOpen(false); setPoError(''); }}
+                style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.5rem 1rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                Cancel
               </button>
-            )}
-            <button onClick={() => doAction('cancel')} disabled={actionLoading !== null}
-              style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
-              {actionLoading === 'cancel' ? 'Cancelling…' : 'Cancel Requisition'}
-            </button>
+              <button type="button" onClick={submitCreatePO} disabled={poSubmitting || !poVendorId}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, cursor: poSubmitting || !poVendorId ? 'not-allowed' : 'pointer', opacity: poSubmitting || !poVendorId ? 0.7 : 1 }}>
+                {poSubmitting ? 'Creating…' : 'Create PO'}
+              </button>
+            </div>
           </div>
-          {error && <div style={{ marginTop: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem' }}>{error}</div>}
         </div>
       )}
     </div>
