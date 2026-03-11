@@ -203,6 +203,8 @@ export const api = {
     poCycleTime: () => apiFetch<any>('/analytics/po-cycle-time'),
     pendingItems: () => apiFetch<any>('/analytics/pending-items'),
     recentActivity: () => apiFetch<any[]>('/analytics/recent-activity'),
+    vendorPerformance: () => apiFetch<any[]>('/analytics/vendor-performance'),
+    budgetUtilization: () => apiFetch<any[]>('/analytics/budget-utilization'),
   },
   search: {
     query: (q: string) => apiFetch<any>(`/search?q=${encodeURIComponent(q)}`),

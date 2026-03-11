@@ -50,6 +50,18 @@ export class AnalyticsController {
     return this.analyticsService.pendingItems(orgId);
   }
 
+  @Get('vendor-performance')
+  @ApiOperation({ summary: 'Vendor performance metrics (exception rate, avg days to approve, spend)' })
+  vendorPerformance(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.vendorPerformance(orgId);
+  }
+
+  @Get('budget-utilization')
+  @ApiOperation({ summary: 'Budget utilization for current fiscal year' })
+  budgetUtilization(@CurrentOrgId() orgId: string) {
+    return this.analyticsService.budgetUtilization(orgId);
+  }
+
   @Get('recent-activity')
   @ApiOperation({ summary: 'Recent audit log activity (last 20 events)' })
   recentActivity(@CurrentOrgId() orgId: string) {

@@ -23,6 +23,8 @@ interface DeptRow     { department: string; total: string; poCount: number }
 interface MonthRow    { month: string; total: string; invoiceCount: number }
 interface AgingRow    { bucket: string; count: number; total: string }
 interface CycleRow    { avgDays: string | null; minDays: string | null; maxDays: string | null; poCount: number }
+interface VendorPerfRow { vendorId: string; vendorName: string; invoiceCount: number; exceptionCount: number; exceptionRate: string | null; avgDaysToApprove: string | null; totalApproved: string; poCount: number }
+interface BudgetUtilRow { budgetId: string; budgetName: string; budgetType: string; fiscalYear: number; totalAmount: string; spentAmount: string; utilizationPct: string | null; remaining: string; departmentName: string | null; projectName: string | null }
 
 
 const card: React.CSSProperties = {
@@ -38,7 +40,9 @@ export default function AnalyticsPage() {
   const [depts,   setDepts]   = useState<DeptRow[]>([]);
   const [monthly, setMonthly] = useState<MonthRow[]>([]);
   const [aging,   setAging]   = useState<AgingRow[]>([]);
-  const [cycle,   setCycle]   = useState<CycleRow | null>(null);
+  const [cycle,       setCycle]       = useState<CycleRow | null>(null);
+  const [vendPerf,    setVendPerf]    = useState<VendorPerfRow[]>([]);
+  const [budgetUtil,  setBudgetUtil]  = useState<BudgetUtilRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,9 +53,12 @@ export default function AnalyticsPage() {
       api.analytics.monthlySpend() as Promise<MonthRow[]>,
       api.analytics.invoiceAging() as Promise<AgingRow[]>,
       api.analytics.poCycleTime() as Promise<CycleRow>,
+      api.analytics.vendorPerformance() as Promise<VendorPerfRow[]>,
+      api.analytics.budgetUtilization() as Promise<BudgetUtilRow[]>,
     ])
-      .then(([k, v, d, m, a, c]) => {
+      .then(([k, v, d, m, a, c, vp, bu]) => {
         setKpis(k); setVendors(v); setDepts(d); setMonthly(m); setAging(a); setCycle(c);
+        setVendPerf(vp); setBudgetUtil(bu);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -178,7 +185,7 @@ export default function AnalyticsPage() {
 
       {/* PO cycle time */}
       {cycle && (
-        <div style={card}>
+        <div style={{ ...card, marginBottom: '1.25rem' }}>
           <h2 style={sectionTitle}>PO Cycle Time (Draft → Issued)</h2>
           {!cycle.avgDays ? (
             <Empty text="No issued purchase orders yet" />
@@ -192,6 +199,91 @@ export default function AnalyticsPage() {
           )}
         </div>
       )}
+
+      {/* Budget utilization */}
+      <div style={{ ...card, marginBottom: '1.25rem' }}>
+        <h2 style={sectionTitle}>Budget Utilization (Current Fiscal Year)</h2>
+        {budgetUtil.length === 0 ? (
+          <Empty text="No budgets for the current fiscal year" />
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['Budget', 'Type', 'Scope', 'Allocated', 'Spent', 'Remaining', 'Utilization'].map((h) => (
+                  <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {budgetUtil.map((b) => {
+                const pct = Number(b.utilizationPct ?? 0);
+                const barColor = pct >= 100 ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#22c55e';
+                return (
+                  <tr key={b.budgetId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: '#111827' }}>{b.budgetName}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280', textTransform: 'capitalize' }}>{b.budgetType?.replace('_', ' ')}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280' }}>{b.departmentName ?? b.projectName ?? '—'}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{fmt(b.totalAmount)}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{fmt(b.spentAmount)}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: Number(b.remaining) < 0 ? '#ef4444' : '#374151', fontWeight: Number(b.remaining) < 0 ? 600 : 400 }}>
+                      {fmt(b.remaining)}
+                    </td>
+                    <td style={{ padding: '0.625rem 0.75rem', minWidth: '120px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ flex: 1, background: '#e5e7eb', borderRadius: 4, height: 6 }}>
+                          <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor, height: 6, borderRadius: 4 }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: pct >= 80 ? barColor : '#6b7280', fontWeight: pct >= 80 ? 600 : 400, minWidth: '36px', textAlign: 'right' }}>
+                          {b.utilizationPct != null ? `${b.utilizationPct}%` : '—'}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Vendor performance */}
+      <div style={card}>
+        <h2 style={sectionTitle}>Vendor Performance</h2>
+        {vendPerf.length === 0 ? (
+          <Empty text="No vendor data yet" />
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['Vendor', 'Invoices', 'Exceptions', 'Exception Rate', 'Avg Days to Approve', 'Total Approved', 'POs'].map((h) => (
+                  <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontWeight: 600, color: '#6b7280', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {vendPerf.map((v) => {
+                const excRate = Number(v.exceptionRate ?? 0);
+                const excColor = excRate === 0 ? '#22c55e' : excRate < 20 ? '#f59e0b' : '#ef4444';
+                return (
+                  <tr key={v.vendorId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '0.625rem 0.75rem', fontWeight: 500, color: '#111827' }}>{v.vendorName}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{v.invoiceCount}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>{v.exceptionCount}</td>
+                    <td style={{ padding: '0.625rem 0.75rem' }}>
+                      <span style={{ color: excColor, fontWeight: 600 }}>{v.exceptionRate != null ? `${v.exceptionRate}%` : '—'}</span>
+                    </td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151' }}>
+                      {v.avgDaysToApprove != null ? `${v.avgDaysToApprove} days` : '—'}
+                    </td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#374151', fontWeight: 500 }}>{fmt(v.totalApproved)}</td>
+                    <td style={{ padding: '0.625rem 0.75rem', color: '#6b7280' }}>{v.poCount}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

@@ -190,12 +190,27 @@ export class BudgetsService {
 
     if (!budget) return { updated: false, message: 'No budget configured' };
 
+    const today = new Date();
+
     await this.db.update(budgets)
       .set({
         spentAmount: sql`${budgets.spentAmount} + ${String(amount)}`,
         updatedAt: new Date(),
       })
       .where(and(eq(budgets.id, budget.id), eq(budgets.organizationId, organizationId)));
+
+    // Also update the period that covers today's date
+    await this.db.update(budgetPeriods)
+      .set({
+        spentAmount: sql`${budgetPeriods.spentAmount} + ${String(amount)}`,
+      })
+      .where(
+        and(
+          eq(budgetPeriods.budgetId, budget.id),
+          sql`${budgetPeriods.periodStart} <= ${today}`,
+          sql`${budgetPeriods.periodEnd} >= ${today}`,
+        ),
+      );
 
     return { updated: true, budgetId: budget.id };
   }

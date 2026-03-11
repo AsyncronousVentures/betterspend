@@ -5,6 +5,7 @@ import { SequenceService } from '../../common/services/sequence.service';
 import { ApprovalEngineService } from '../approvals/approval-engine.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import { AuditService } from '../audit/audit.service';
+import { BudgetsService } from '../budgets/budgets.service';
 import type { Db } from '@betterspend/db';
 import { requisitions, requisitionLines } from '@betterspend/db';
 import type { CreateRequisitionInput } from '@betterspend/shared';
@@ -17,6 +18,7 @@ export class RequisitionsService {
     private readonly approvalEngine: ApprovalEngineService,
     private readonly webhookEvents: WebhookEventService,
     private readonly audit: AuditService,
+    private readonly budgets: BudgetsService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; departmentId?: string }) {
@@ -141,6 +143,20 @@ export class RequisitionsService {
     }
     if (!req.lines || req.lines.length === 0) {
       throw new BadRequestException('Requisition must have at least one line item');
+    }
+
+    // Budget gate: check if departmentId + totalAmount exceeds remaining budget
+    if (req.departmentId && req.totalAmount) {
+      const fiscalYear = new Date().getFullYear();
+      const amount = parseFloat(String(req.totalAmount));
+      const budgetCheck = await this.budgets.checkBudget(organizationId, req.departmentId, amount, fiscalYear);
+      if (!budgetCheck.withinBudget) {
+        throw new BadRequestException(
+          `Budget exceeded for department. Remaining: $${budgetCheck.remaining?.toFixed(2) ?? '0'}, ` +
+          `Requested: $${amount.toFixed(2)}. ` +
+          `Budget: ${budgetCheck.budgetName} (Allocated: $${budgetCheck.allocated?.toFixed(2) ?? '0'}, Spent: $${budgetCheck.spent?.toFixed(2) ?? '0'})`,
+        );
+      }
     }
 
     await this.db.update(requisitions)
