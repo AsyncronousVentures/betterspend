@@ -64,6 +64,21 @@ export default function VendorDetailPage() {
   const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: COLORS.textSecondary, marginBottom: '0.25rem' };
 
   const [punchoutSaving, setPunchoutSaving] = useState(false);
+  const [portalSending, setPortalSending] = useState(false);
+  const [portalMsg, setPortalMsg] = useState('');
+
+  async function handleSendPortalAccess() {
+    setPortalSending(true);
+    setPortalMsg('');
+    try {
+      await api.vendorPortal.sendAccess(id);
+      setPortalMsg('Access link sent to vendor\'s contact email.');
+    } catch (e: any) {
+      setPortalMsg('Error: ' + (e.message || 'Failed to send access link'));
+    } finally {
+      setPortalSending(false);
+    }
+  }
 
   async function handleSendPortalAccess() {
     setSendingAccess(true);
@@ -227,6 +242,30 @@ export default function VendorDetailPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+
+          {/* Vendor Portal */}
+          <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.tableBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: COLORS.textSecondary, margin: '0 0 0.25rem' }}>Vendor Portal</h2>
+                <p style={{ fontSize: '0.8rem', color: COLORS.textSecondary, margin: 0 }}>
+                  Send a secure, tokenized portal link to the vendor so they can view POs and submit invoices directly.
+                </p>
+              </div>
+              <button
+                onClick={handleSendPortalAccess}
+                disabled={portalSending}
+                style={{ padding: '0.4rem 1rem', border: 'none', borderRadius: '6px', cursor: portalSending ? 'not-allowed' : 'pointer', background: COLORS.accentBlueLight, color: COLORS.accentBlueDark, fontWeight: 500, fontSize: '0.875rem', whiteSpace: 'nowrap', marginLeft: '1rem' }}
+              >
+                {portalSending ? 'Sending…' : 'Send Access Link'}
+              </button>
+            </div>
+            {portalMsg && (
+              <div style={{ marginTop: '0.75rem', padding: '0.625rem 0.875rem', background: portalMsg.startsWith('Error') ? COLORS.accentRedLight : '#f0fdf4', borderRadius: '6px', fontSize: '0.8rem', color: portalMsg.startsWith('Error') ? COLORS.accentRedDark : '#15803d', border: `1px solid ${portalMsg.startsWith('Error') ? '#fecaca' : '#bbf7d0'}` }}>
+                {portalMsg}
               </div>
             )}
           </div>
