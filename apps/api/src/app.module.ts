@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
+import { QueueModule } from './common/queue/queue.module';
 import { CommonServicesModule } from './common/services/common-services.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { UsersModule } from './modules/users/users.module';
@@ -36,6 +37,7 @@ import { StorageModule } from './common/storage/storage.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
+    QueueModule,
     StorageModule,
     AuthModule,
     CommonServicesModule,

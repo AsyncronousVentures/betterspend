@@ -1,4 +1,6 @@
 import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
@@ -74,7 +76,10 @@ export class OcrService {
   private readonly logger = new Logger(OcrService.name);
   private readonly anthropic: Anthropic | null;
 
-  constructor(@Inject(DB_TOKEN) private readonly db: Db) {
+  constructor(
+    @Inject(DB_TOKEN) private readonly db: Db,
+    @InjectQueue('ocr') private readonly ocrQueue: Queue,
+  ) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     this.anthropic = apiKey ? new Anthropic({ apiKey }) : null;
     if (!this.anthropic) {
@@ -101,12 +106,15 @@ export class OcrService {
       })
       .returning();
 
-    // Fire-and-forget extraction
-    setImmediate(() => {
-      this.runExtraction(job.id).catch((err: unknown) =>
-        this.logger.error(`OCR extraction failed for job ${job.id}: ${String(err)}`),
-      );
-    });
+    // Enqueue extraction job via BullMQ
+    await this.ocrQueue.add(
+      'extract',
+      { jobId: job.id },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+      },
+    );
 
     return job;
   }
@@ -131,7 +139,7 @@ export class OcrService {
     await this.db.update(ocrJobs).set({ invoiceId, updatedAt: new Date() }).where(eq(ocrJobs.id, jobId));
   }
 
-  private async runExtraction(jobId: string): Promise<void> {
+  async runExtractionById(jobId: string): Promise<void> {
     await this.db
       .update(ocrJobs)
       .set({ status: 'processing', updatedAt: new Date() })

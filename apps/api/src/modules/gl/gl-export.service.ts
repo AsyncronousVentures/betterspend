@@ -1,4 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
@@ -39,6 +41,7 @@ export class GlExportService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly glMappingsService: GlMappingsService,
+    @InjectQueue('gl-export') private readonly glQueue: Queue,
   ) {}
 
   /**
@@ -46,11 +49,18 @@ export class GlExportService {
    * Called fire-and-forget from InvoicesService via the invoice.approved webhook event.
    */
   enqueue(organizationId: string, invoiceId: string, targetSystem: GlTargetSystem): void {
-    setImmediate(() => {
-      this.processExport(organizationId, invoiceId, targetSystem).catch((err: unknown) =>
-        this.logger.error(`GL export failed for invoice ${invoiceId}: ${String(err)}`),
+    this.glQueue
+      .add(
+        'process-export',
+        { organizationId, invoiceId, targetSystem },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+        },
+      )
+      .catch((err: unknown) =>
+        this.logger.error(`Failed to enqueue GL export for invoice ${invoiceId}: ${String(err)}`),
       );
-    });
   }
 
   async processExport(
@@ -173,14 +183,17 @@ export class GlExportService {
     if (!job) throw new Error(`GL export job ${jobId} not found`);
     // Reset to pending then re-process
     await this.db.update(glExportJobs).set({ status: 'pending', errorMessage: null, updatedAt: new Date() }).where(eq(glExportJobs.id, jobId));
-    setImmediate(() => {
-      this.processExportForJob(jobId, organizationId, job.invoiceId, job.targetSystem as GlTargetSystem).catch((err: unknown) =>
-        this.logger.error(`GL retry failed for job ${jobId}: ${String(err)}`),
-      );
-    });
+    await this.glQueue.add(
+      'retry-export',
+      { jobId, organizationId, invoiceId: job.invoiceId, targetSystem: job.targetSystem as GlTargetSystem },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+      },
+    );
   }
 
-  private async processExportForJob(jobId: string, organizationId: string, invoiceId: string, targetSystem: GlTargetSystem): Promise<void> {
+  async processExportForJob(jobId: string, organizationId: string, invoiceId: string, targetSystem: GlTargetSystem): Promise<void> {
     try {
       const invoice = await this.db.query.invoices.findFirst({
         where: (i, { eq: eqFn }) => eqFn(i.id, invoiceId),
