@@ -55,8 +55,6 @@ function formatCurrency(amount: string | number | null, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(amount));
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
-
 export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState('');
   const [po, setPo] = useState<PurchaseOrder | null>(null);
@@ -119,9 +117,40 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
   const lines = po.lines ?? [];
   const versions = po.versions ?? [];
   const statusStyle = STATUS_COLORS[po.status] ?? { background: '#f3f4f6', color: '#374151' };
-  const pdfUrl = `${API_BASE}/api/v1/purchase-orders/${po.id}/pdf`;
   const canIssue = po.status === 'draft' || po.status === 'approved';
   const canChangeOrder = po.status !== 'closed' && po.status !== 'cancelled';
+  const canCancel = po.status !== 'closed' && po.status !== 'cancelled' && po.status !== 'received';
+
+  async function cancelPO() {
+    if (!confirm('Cancel this purchase order?')) return;
+    setActionError('');
+    setActionLoading('cancel');
+    try {
+      await api.purchaseOrders.cancel(id);
+      const updated = await api.purchaseOrders.get(id);
+      setPo(updated);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Cancel failed');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function downloadPDF() {
+    try {
+      const res = await api.purchaseOrders.pdf(id);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${po?.number ?? 'purchase-order'}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'PDF download failed');
+    }
+  }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '960px' }}>
@@ -239,14 +268,20 @@ export default function PurchaseOrderDetailPage({ params }: { params: Promise<{ 
             {actionLoading === 'issue' ? 'Issuing…' : 'Issue PO'}
           </button>
         )}
-        <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-          style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
+        <button onClick={downloadPDF}
+          style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
           Download PDF
-        </a>
+        </button>
         {canChangeOrder && (
           <button onClick={() => setChangeDialogOpen(true)} disabled={actionLoading !== null}
             style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}>
             Change Order
+          </button>
+        )}
+        {canCancel && (
+          <button onClick={cancelPO} disabled={actionLoading !== null}
+            style={{ background: '#fff', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, cursor: actionLoading ? 'not-allowed' : 'pointer', opacity: actionLoading ? 0.7 : 1 }}>
+            {actionLoading === 'cancel' ? 'Cancelling…' : 'Cancel PO'}
           </button>
         )}
       </div>
