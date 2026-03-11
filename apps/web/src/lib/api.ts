@@ -201,6 +201,8 @@ export const api = {
     monthlySpend: () => apiFetch<any[]>('/analytics/spend/monthly'),
     invoiceAging: () => apiFetch<any[]>('/analytics/invoice-aging'),
     poCycleTime: () => apiFetch<any>('/analytics/po-cycle-time'),
+    pendingItems: () => apiFetch<any>('/analytics/pending-items'),
+    recentActivity: () => apiFetch<any[]>('/analytics/recent-activity'),
   },
   search: {
     query: (q: string) => apiFetch<any>(`/search?q=${encodeURIComponent(q)}`),

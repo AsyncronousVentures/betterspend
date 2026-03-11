@@ -144,4 +144,69 @@ export class AnalyticsService {
       budgets: budgetRow[0] ?? {},
     };
   }
+
+  /** Items requiring action */
+  async pendingItems(organizationId: string) {
+    const [approvalRow, invoiceRow, reqRow, grnRow] = await Promise.all([
+      this.db.execute(sql`
+        SELECT COUNT(ar.id)::int AS count
+        FROM approval_requests ar
+        JOIN requisitions r ON r.id = ar.approvable_id AND ar.approvable_type = 'requisition'
+        WHERE r.organization_id = ${organizationId} AND ar.status = 'pending'
+        UNION ALL
+        SELECT COUNT(ar.id)::int AS count
+        FROM approval_requests ar
+        JOIN purchase_orders po ON po.id = ar.approvable_id AND ar.approvable_type = 'purchase_order'
+        WHERE po.organization_id = ${organizationId} AND ar.status = 'pending'
+      `),
+      this.db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM invoices
+        WHERE organization_id = ${organizationId}
+          AND status IN ('exception', 'partial_match')
+      `),
+      this.db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM requisitions
+        WHERE organization_id = ${organizationId}
+          AND status = 'pending_approval'
+      `),
+      this.db.execute(sql`
+        SELECT COUNT(DISTINCT po.id)::int AS count
+        FROM purchase_orders po
+        WHERE po.organization_id = ${organizationId}
+          AND po.status = 'issued'
+          AND NOT EXISTS (
+            SELECT 1 FROM goods_receipts gr
+            WHERE gr.purchase_order_id = po.id
+          )
+      `),
+    ]);
+
+    const pendingApprovals = (approvalRow as any[]).reduce((sum: number, r: any) => sum + Number(r.count ?? 0), 0);
+
+    return {
+      pendingApprovals,
+      invoiceExceptions: Number((invoiceRow as any[])[0]?.count ?? 0),
+      requisitionsPendingApproval: Number((reqRow as any[])[0]?.count ?? 0),
+      posAwaitingReceipt: Number((grnRow as any[])[0]?.count ?? 0),
+    };
+  }
+
+  /** Recent activity from audit log */
+  async recentActivity(organizationId: string, limit = 20) {
+    return this.db.execute(sql`
+      SELECT
+        al.id,
+        al.action,
+        al.entity_type AS "entityType",
+        al.entity_id AS "entityId",
+        al.changes,
+        al.created_at AS "createdAt",
+        u.name AS "userName"
+      FROM audit_log al
+      LEFT JOIN users u ON u.id = al.performed_by
+      WHERE al.organization_id = ${organizationId}
+      ORDER BY al.created_at DESC
+      LIMIT ${limit}
+    `);
+  }
 }
