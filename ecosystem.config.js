@@ -12,7 +12,8 @@ module.exports = {
         DATABASE_URL: 'postgresql://betterspend:betterspend@localhost:5433/betterspend',
         REDIS_URL: 'redis://localhost:6379',
         API_PORT: 4001,
-        WEB_URL: 'http://localhost:3100',
+        API_URL: 'http://147.135.36.170:4001',
+        WEB_URL: 'http://147.135.36.170:3100',
       },
       log_file: '/home/ubuntu/.pm2/logs/betterspend-api.log',
       error_file: '/home/ubuntu/.pm2/logs/betterspend-api-error.log',
@@ -33,7 +34,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3100,
-        NEXT_PUBLIC_API_URL: 'http://localhost:4001/api/v1',
+        NEXT_PUBLIC_API_URL: 'http://147.135.36.170:4001',
       },
       log_file: '/home/ubuntu/.pm2/logs/betterspend-web.log',
       error_file: '/home/ubuntu/.pm2/logs/betterspend-web-error.log',

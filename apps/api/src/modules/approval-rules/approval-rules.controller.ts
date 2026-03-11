@@ -3,8 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApprovalRulesService, CreateApprovalRuleInput, UpdateApprovalRuleInput } from './approval-rules.service';
-
-const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
+import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 
 @ApiTags('approval-rules')
 @Controller('approval-rules')
@@ -13,20 +12,20 @@ export class ApprovalRulesController {
 
   @Get()
   @ApiOperation({ summary: 'List all approval rules' })
-  findAll() {
-    return this.approvalRulesService.findAll(DEMO_ORG_ID);
+  findAll(@CurrentOrgId() orgId: string) {
+    return this.approvalRulesService.findAll(orgId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get approval rule detail' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.approvalRulesService.findOne(id, DEMO_ORG_ID);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.approvalRulesService.findOne(id, orgId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create an approval rule with steps' })
-  create(@Body() body: CreateApprovalRuleInput) {
-    return this.approvalRulesService.create(DEMO_ORG_ID, body);
+  create(@Body() body: CreateApprovalRuleInput, @CurrentOrgId() orgId: string) {
+    return this.approvalRulesService.create(orgId, body);
   }
 
   @Patch(':id')
@@ -34,14 +33,15 @@ export class ApprovalRulesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateApprovalRuleInput,
+    @CurrentOrgId() orgId: string,
   ) {
-    return this.approvalRulesService.update(id, DEMO_ORG_ID, body);
+    return this.approvalRulesService.update(id, orgId, body);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Deactivate an approval rule' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.approvalRulesService.remove(id, DEMO_ORG_ID);
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.approvalRulesService.remove(id, orgId);
   }
 }

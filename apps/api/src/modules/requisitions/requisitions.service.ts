@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { ApprovalEngineService } from '../approvals/approval-engine.service';
+import { WebhookEventService } from '../webhooks/webhook-event.service';
 import type { Db } from '@betterspend/db';
 import { requisitions, requisitionLines } from '@betterspend/db';
 import type { CreateRequisitionInput } from '@betterspend/shared';
@@ -13,6 +14,7 @@ export class RequisitionsService {
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
     private readonly approvalEngine: ApprovalEngineService,
+    private readonly webhookEvents: WebhookEventService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; departmentId?: string }) {
@@ -146,7 +148,9 @@ export class RequisitionsService {
     // Initiate approval — may auto-approve (status → 'approved') or create a pending request
     await this.approvalEngine.initiateApproval(organizationId, 'requisition', id, actorId);
 
-    return this.findOne(id, organizationId);
+    const submitted = await this.findOne(id, organizationId);
+    this.webhookEvents.emit(organizationId, 'requisition.submitted', { requisition: submitted });
+    return submitted;
   }
 
   async cancel(id: string, organizationId: string) {

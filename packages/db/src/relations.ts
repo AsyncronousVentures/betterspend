@@ -8,6 +8,10 @@ import { goodsReceipts, goodsReceiptLines } from './schema/receiving';
 import { invoices, invoiceLines, matchResults } from './schema/invoices';
 import { budgets, budgetPeriods } from './schema/budgets';
 import { approvalRules, approvalRuleSteps, approvalRequests, approvalActions } from './schema/approvals';
+import { webhookEndpoints, webhookDeliveries } from './schema/webhooks';
+import { glMappings, glExportJobs } from './schema/gl';
+import { ocrJobs } from './schema/ocr';
+import { authSessions, authAccounts } from './schema/auth';
 
 
 export const organizationsRelations = relations(organizations, ({ many }) => ({
@@ -39,6 +43,11 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   organization: one(organizations, { fields: [vendors.organizationId], references: [organizations.id] }),
   catalogItems: many(catalogItems),
+}));
+
+export const catalogItemsRelations = relations(catalogItems, ({ one }) => ({
+  organization: one(organizations, { fields: [catalogItems.organizationId], references: [organizations.id] }),
+  vendor: one(vendors, { fields: [catalogItems.vendorId], references: [vendors.id] }),
 }));
 
 export const requisitionsRelations = relations(requisitions, ({ one, many }) => ({
@@ -132,4 +141,34 @@ export const budgetsRelations = relations(budgets, ({ one, many }) => ({
 
 export const budgetPeriodsRelations = relations(budgetPeriods, ({ one }) => ({
   budget: one(budgets, { fields: [budgetPeriods.budgetId], references: [budgets.id] }),
+}));
+
+export const webhookEndpointsRelations = relations(webhookEndpoints, ({ one, many }) => ({
+  organization: one(organizations, { fields: [webhookEndpoints.organizationId], references: [organizations.id] }),
+  deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveriesRelations = relations(webhookDeliveries, ({ one }) => ({
+  endpoint: one(webhookEndpoints, { fields: [webhookDeliveries.webhookEndpointId], references: [webhookEndpoints.id] }),
+}));
+
+export const glMappingsRelations = relations(glMappings, ({ one }) => ({
+  organization: one(organizations, { fields: [glMappings.organizationId], references: [organizations.id] }),
+}));
+
+export const glExportJobsRelations = relations(glExportJobs, ({ one }) => ({
+  organization: one(organizations, { fields: [glExportJobs.organizationId], references: [organizations.id] }),
+  invoice: one(invoices, { fields: [glExportJobs.invoiceId], references: [invoices.id] }),
+}));
+
+export const ocrJobsRelations = relations(ocrJobs, ({ one }) => ({
+  organization: one(organizations, { fields: [ocrJobs.organizationId], references: [organizations.id] }),
+}));
+
+export const authSessionsRelations = relations(authSessions, ({ one }) => ({
+  user: one(users, { fields: [authSessions.userId], references: [users.id] }),
+}));
+
+export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
+  user: one(users, { fields: [authAccounts.userId], references: [users.id] }),
 }));

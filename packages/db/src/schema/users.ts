@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, text, timestamp } from 'drizzle-orm/pg-core';
 import { organizations, departments } from './organizations';
 
 export const users = pgTable('users', {
@@ -6,6 +6,8 @@ export const users = pgTable('users', {
   organizationId: uuid('organization_id').notNull().references(() => organizations.id),
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  image: text('image'),
   departmentId: uuid('department_id').references(() => departments.id),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

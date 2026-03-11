@@ -4,6 +4,7 @@ import { DB_TOKEN } from '../../database/database.module';
 import type { Db } from '@betterspend/db';
 import { goodsReceipts, goodsReceiptLines, purchaseOrders, poLines } from '@betterspend/db';
 import { SequenceService } from '../../common/services/sequence.service';
+import { WebhookEventService } from '../webhooks/webhook-event.service';
 
 export interface CreateGrnInput {
   purchaseOrderId: string;
@@ -24,6 +25,7 @@ export class ReceivingService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
+    private readonly webhookEvents: WebhookEventService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -89,7 +91,9 @@ export class ReceivingService {
     // Update PO status based on receipt completeness
     await this.updatePoReceiptStatus(input.purchaseOrderId, organizationId);
 
-    return this.findOne(grnId, organizationId);
+    const grn = await this.findOne(grnId, organizationId);
+    this.webhookEvents.emit(organizationId, 'grn.created', { goodsReceipt: grn });
+    return grn;
   }
 
   private async updatePoReceiptStatus(poId: string, organizationId: string) {

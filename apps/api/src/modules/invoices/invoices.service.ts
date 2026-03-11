@@ -5,6 +5,8 @@ import type { Db } from '@betterspend/db';
 import { invoices, invoiceLines } from '@betterspend/db';
 import { SequenceService } from '../../common/services/sequence.service';
 import { MatchingService } from './matching.service';
+import { WebhookEventService } from '../webhooks/webhook-event.service';
+import { GlExportService } from '../gl/gl-export.service';
 
 export interface CreateInvoiceInput {
   purchaseOrderId?: string;
@@ -29,6 +31,8 @@ export class InvoicesService {
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
     private readonly matchingService: MatchingService,
+    private readonly webhookEvents: WebhookEventService,
+    private readonly glExport: GlExportService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -96,7 +100,6 @@ export class InvoicesService {
     // Auto-run 3-way match if PO is linked
     if (input.purchaseOrderId) {
       const matchResult = await this.matchingService.runMatch(invoiceId);
-      // Update status based on match
       const newStatus = matchResult.matchStatus === 'full_match' ? 'matched'
         : matchResult.matchStatus === 'exception' ? 'exception'
         : 'partial_match';
@@ -105,7 +108,11 @@ export class InvoicesService {
         .where(eq(invoices.id, invoiceId));
     }
 
-    return this.findOne(invoiceId, organizationId);
+    const created = await this.findOne(invoiceId, organizationId);
+    if (input.purchaseOrderId) {
+      this.webhookEvents.emit(organizationId, 'invoice.matched', { invoice: created });
+    }
+    return created;
   }
 
   async runMatch(id: string, organizationId: string) {
@@ -121,6 +128,9 @@ export class InvoicesService {
     await this.db.update(invoices)
       .set({ status: 'approved', approvedBy: approverId, approvedAt: new Date(), updatedAt: new Date() })
       .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)));
-    return this.findOne(id, organizationId);
+    const approved = await this.findOne(id, organizationId);
+    this.webhookEvents.emit(organizationId, 'invoice.approved', { invoice: approved });
+    this.glExport.enqueue(organizationId, id, 'qbo');
+    return approved;
   }
 }

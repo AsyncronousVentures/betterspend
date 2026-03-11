@@ -2,10 +2,17 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { createAuthInstance } from './auth/auth.instance';
+import { SessionGuard } from './modules/auth/session.guard';
+import { RolesGuard } from './modules/auth/roles.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security headers (CSP disabled — Swagger UI needs inline scripts)
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({
@@ -20,6 +27,16 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // Mount better-auth handler at /api/auth/* (before NestJS global prefix)
+  const auth = await createAuthInstance();
+  const { toNodeHandler } = await import('better-auth/node');
+  app.use('/api/auth', toNodeHandler(auth.handler));
+
+  // Global guards: SessionGuard (authentication) + RolesGuard (authorization)
+  const sessionGuard = app.get(SessionGuard);
+  const rolesGuard = app.get(RolesGuard);
+  app.useGlobalGuards(sessionGuard, rolesGuard);
 
   const config = new DocumentBuilder()
     .setTitle('BetterSpend API')

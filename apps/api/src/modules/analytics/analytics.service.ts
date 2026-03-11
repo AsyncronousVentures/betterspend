@@ -1,0 +1,147 @@
+import { Injectable, Inject } from '@nestjs/common';
+import { sql } from 'drizzle-orm';
+import { DB_TOKEN } from '../../database/database.module';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type * as schema from '@betterspend/db';
+
+type Db = NodePgDatabase<typeof schema>;
+
+@Injectable()
+export class AnalyticsService {
+  constructor(@Inject(DB_TOKEN) private readonly db: Db) {}
+
+  /** Spend by vendor (from approved invoices) */
+  async spendByVendor(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        v.id          AS "vendorId",
+        v.name        AS "vendorName",
+        SUM(i.total_amount)::numeric               AS total,
+        COUNT(DISTINCT i.id)::int                  AS "invoiceCount"
+      FROM invoices i
+      JOIN vendors v ON v.id = i.vendor_id
+      WHERE i.organization_id = ${organizationId}
+        AND i.status = 'approved'
+      GROUP BY v.id, v.name
+      ORDER BY total DESC
+      LIMIT 20
+    `);
+    return rows;
+  }
+
+  /** Spend by department (from active POs, via requisition link) */
+  async spendByDepartment(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        COALESCE(d.name, 'Unassigned')             AS department,
+        SUM(po.total_amount)::numeric              AS total,
+        COUNT(DISTINCT po.id)::int                 AS "poCount"
+      FROM purchase_orders po
+      LEFT JOIN requisitions r  ON r.id = po.requisition_id
+      LEFT JOIN departments  d  ON d.id = r.department_id
+      WHERE po.organization_id = ${organizationId}
+        AND po.status NOT IN ('draft', 'cancelled')
+      GROUP BY d.name
+      ORDER BY total DESC
+    `);
+    return rows;
+  }
+
+  /** Monthly spend trend (last 12 months, from approved invoices) */
+  async monthlySpend(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', i.invoice_date), 'YYYY-MM') AS month,
+        SUM(i.total_amount)::numeric                             AS total,
+        COUNT(DISTINCT i.id)::int                                AS "invoiceCount"
+      FROM invoices i
+      WHERE i.organization_id = ${organizationId}
+        AND i.status = 'approved'
+        AND i.invoice_date >= NOW() - INTERVAL '12 months'
+      GROUP BY DATE_TRUNC('month', i.invoice_date)
+      ORDER BY month ASC
+    `);
+    return rows;
+  }
+
+  /** Invoice aging (unpaid invoices grouped by age bucket) */
+  async invoiceAging(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        CASE
+          WHEN NOW() - i.due_date <= INTERVAL '30 days'  THEN '0-30 days'
+          WHEN NOW() - i.due_date <= INTERVAL '60 days'  THEN '31-60 days'
+          WHEN NOW() - i.due_date <= INTERVAL '90 days'  THEN '61-90 days'
+          ELSE 'Over 90 days'
+        END AS bucket,
+        COUNT(*)::int                                      AS count,
+        SUM(i.total_amount)::numeric                       AS total
+      FROM invoices i
+      WHERE i.organization_id = ${organizationId}
+        AND i.status NOT IN ('approved', 'cancelled')
+        AND i.due_date IS NOT NULL
+      GROUP BY bucket
+      ORDER BY
+        CASE bucket
+          WHEN '0-30 days'    THEN 1
+          WHEN '31-60 days'   THEN 2
+          WHEN '61-90 days'   THEN 3
+          ELSE 4
+        END
+    `);
+    return rows;
+  }
+
+  /** PO cycle time: avg days from draft to issued */
+  async poCycleTime(organizationId: string) {
+    const rows = await this.db.execute(sql`
+      SELECT
+        AVG(EXTRACT(EPOCH FROM (po.issued_at - po.created_at)) / 86400)::numeric AS "avgDays",
+        MIN(EXTRACT(EPOCH FROM (po.issued_at - po.created_at)) / 86400)::numeric AS "minDays",
+        MAX(EXTRACT(EPOCH FROM (po.issued_at - po.created_at)) / 86400)::numeric AS "maxDays",
+        COUNT(*)::int AS "poCount"
+      FROM purchase_orders po
+      WHERE po.organization_id = ${organizationId}
+        AND po.issued_at IS NOT NULL
+    `);
+    return rows[0] ?? { avgDays: null, minDays: null, maxDays: null, poCount: 0 };
+  }
+
+  /** High-level KPIs */
+  async kpis(organizationId: string) {
+    const [poRow, reqRow, invoiceRow, budgetRow] = await Promise.all([
+      this.db.execute(sql`
+        SELECT
+          COUNT(*)::int                                                             AS total,
+          SUM(CASE WHEN status NOT IN ('draft','cancelled') THEN 1 ELSE 0 END)::int AS active,
+          COALESCE(SUM(total_amount), 0)::numeric                                   AS "totalValue"
+        FROM purchase_orders
+        WHERE organization_id = ${organizationId}
+      `),
+      this.db.execute(sql`
+        SELECT COUNT(*)::int AS total FROM requisitions
+        WHERE organization_id = ${organizationId}
+          AND status NOT IN ('draft','cancelled')
+      `),
+      this.db.execute(sql`
+        SELECT
+          COUNT(*)::int                                                                     AS total,
+          COALESCE(SUM(CASE WHEN status = 'approved' THEN total_amount::numeric ELSE 0 END), 0) AS paid,
+          COALESCE(SUM(CASE WHEN status != 'approved' THEN total_amount::numeric ELSE 0 END), 0) AS pending
+        FROM invoices WHERE organization_id = ${organizationId}
+      `),
+      this.db.execute(sql`
+        SELECT COALESCE(SUM(total_amount), 0)::numeric AS "totalBudget"
+        FROM budgets WHERE organization_id = ${organizationId}
+          AND fiscal_year = EXTRACT(YEAR FROM NOW())::int
+      `),
+    ]);
+
+    return {
+      purchaseOrders: poRow[0] ?? {},
+      requisitions: reqRow[0] ?? {},
+      invoices: invoiceRow[0] ?? {},
+      budgets: budgetRow[0] ?? {},
+    };
+  }
+}
