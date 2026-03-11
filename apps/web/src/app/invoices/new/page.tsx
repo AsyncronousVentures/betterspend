@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../../lib/api';
 
 interface PO {
   id: string;
@@ -48,10 +47,9 @@ export default function NewInvoicePage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/purchase-orders`)
-      .then((r) => r.json())
+    api.purchaseOrders.list()
       .then((data) => {
-        const arr = Array.isArray(data) ? data : data.data ?? [];
+        const arr = Array.isArray(data) ? data : (data as any).data ?? [];
         setPOs(arr);
       })
       .catch(() => {});
@@ -59,8 +57,7 @@ export default function NewInvoicePage() {
 
   const handlePOChange = async (poId: string) => {
     if (!poId) { setSelectedPO(null); setLines([]); setVendorId(''); return; }
-    const res = await fetch(`${API_URL}/purchase-orders/${poId}`);
-    const po: PO = await res.json();
+    const po: PO = await api.purchaseOrders.get(poId) as PO;
     setSelectedPO(po);
     setVendorId(po.vendor?.id ?? po.vendorId);
     setLines((po.lines ?? []).map((l, i) => ({
@@ -96,21 +93,14 @@ export default function NewInvoicePage() {
       // In production: upload file to MinIO presigned URL, get storageKey back.
       // For now we submit the filename as the storageKey (stub flow).
       const storageKey = `ocr-uploads/${Date.now()}-${file.name}`;
-      const res = await fetch(`${API_URL}/ocr/jobs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, contentType: file.type, storageKey }),
-      });
-      if (!res.ok) throw new Error('Failed to create OCR job');
-      const job = await res.json() as OcrJob;
+      const job = await api.ocr.createJob({ filename: file.name, contentType: file.type, storageKey }) as OcrJob;
       setOcrJobId(job.id);
       setOcrStatus('Extracting…');
 
       // Poll for completion
       pollRef.current = setInterval(async () => {
-        const pollRes = await fetch(`${API_URL}/ocr/jobs/${job.id}`);
-        if (!pollRes.ok) return;
-        const updated = await pollRes.json() as OcrJob;
+        const updated = await api.ocr.getJob(job.id).catch(() => null) as OcrJob | null;
+        if (!updated) return;
         if (updated.status === 'done') {
           clearInterval(pollRef.current!);
           setOcrStatus('Done — fields pre-populated below');
@@ -147,29 +137,20 @@ export default function NewInvoicePage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/invoices`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          purchaseOrderId: selectedPO?.id || undefined,
-          vendorId,
-          invoiceNumber,
-          invoiceDate,
-          dueDate: dueDate || undefined,
-          lines: lines.map((l) => ({
-            poLineId: l.poLineId || undefined,
-            lineNumber: l.lineNumber,
-            description: l.description,
-            quantity: parseFloat(l.quantity),
-            unitPrice: parseFloat(l.unitPrice),
-          })),
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message ?? 'Failed to create invoice');
-      }
-      const inv = await res.json();
+      const inv = await api.invoices.create({
+        purchaseOrderId: selectedPO?.id || undefined,
+        vendorId,
+        invoiceNumber,
+        invoiceDate,
+        dueDate: dueDate || undefined,
+        lines: lines.map((l) => ({
+          poLineId: l.poLineId || undefined,
+          lineNumber: l.lineNumber,
+          description: l.description,
+          quantity: parseFloat(l.quantity),
+          unitPrice: parseFloat(l.unitPrice),
+        })),
+      }) as any;
       router.push(`/invoices/${inv.id}`);
     } catch (err: any) {
       setError(err.message);
