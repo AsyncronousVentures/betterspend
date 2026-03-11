@@ -50,6 +50,7 @@ function formatCurrency(amount: string | number | null, currency = 'USD') {
 export default function RequisitionsPage() {
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     api.requisitions.list()
@@ -58,6 +59,8 @@ export default function RequisitionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filtered = statusFilter ? requisitions.filter((r) => r.status === statusFilter) : requisitions;
+
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
@@ -65,18 +68,30 @@ export default function RequisitionsPage() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>Requisitions</h1>
           <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Manage purchase requisitions</p>
         </div>
-        <Link href="/requisitions/new" style={{ background: '#111827', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
-          + New Requisition
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', color: '#374151' }}
+          >
+            <option value="">All Statuses</option>
+            {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <Link href="/requisitions/new" style={{ background: '#111827', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+            + New Requisition
+          </Link>
+        </div>
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>
-        ) : requisitions.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#9ca3af' }}>
-            <p style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#6b7280', fontWeight: 500 }}>No requisitions yet</p>
-            <p style={{ fontSize: '0.875rem' }}>Create your first requisition to get started.</p>
+            <p style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#6b7280', fontWeight: 500 }}>
+              {statusFilter ? `No ${STATUS_LABELS[statusFilter] ?? statusFilter} requisitions` : 'No requisitions yet'}
+            </p>
+            <p style={{ fontSize: '0.875rem' }}>{statusFilter ? 'Try a different filter.' : 'Create your first requisition to get started.'}</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
@@ -88,8 +103,8 @@ export default function RequisitionsPage() {
               </tr>
             </thead>
             <tbody>
-              {requisitions.map((req, idx) => (
-                <tr key={req.id} style={{ borderBottom: idx < requisitions.length - 1 ? '1px solid #f3f4f6' : undefined }}>
+              {filtered.map((req, idx) => (
+                <tr key={req.id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : undefined }}>
                   <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
                     <Link href={`/requisitions/${req.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{req.number}</Link>
                   </td>

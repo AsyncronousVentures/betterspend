@@ -61,6 +61,20 @@ export class InvoicesService {
   }
 
   async create(organizationId: string, input: CreateInvoiceInput) {
+    // Duplicate invoice detection: same vendor + same invoice number in this org
+    const duplicate = await this.db.query.invoices.findFirst({
+      where: (i, { and, eq }) => and(
+        eq(i.organizationId, organizationId),
+        eq(i.vendorId, input.vendorId),
+        eq(i.invoiceNumber, input.invoiceNumber),
+      ),
+    });
+    if (duplicate) {
+      throw new BadRequestException(
+        `Duplicate invoice: ${input.invoiceNumber} already exists for this vendor (${duplicate.internalNumber})`,
+      );
+    }
+
     const internalNumber = await this.sequenceService.next(organizationId, 'invoice');
 
     const subtotal = input.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
