@@ -2,9 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { signOut } from '../lib/auth-client';
+import { api } from '../lib/api';
 
-const navItems = [
+type NavItem = { label: string; href: string; badge?: number };
+
+const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/' },
   { label: 'Analytics', href: '/analytics' },
   { label: 'Requisitions', href: '/requisitions' },
@@ -31,6 +35,13 @@ const navItems = [
 export default function SidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    api.analytics.pendingItems()
+      .then((data: any) => setPendingCount((data?.pendingApprovals ?? 0) + (data?.invoiceExceptions ?? 0)))
+      .catch(() => {});
+  }, [pathname]); // refresh on navigation
 
   async function handleSignOut() {
     await signOut();
@@ -42,17 +53,22 @@ export default function SidebarNav() {
     return pathname.startsWith(href);
   }
 
+  const items: NavItem[] = navItems.map((item) => {
+    if (item.href === '/approvals' && pendingCount > 0) return { ...item, badge: pendingCount };
+    return item;
+  });
+
   return (
     <>
-    <nav style={{ flex: 1, padding: '0.75rem 0' }}>
-      {navItems.map((item) => {
+    <nav style={{ flex: 1, padding: '0.75rem 0', overflowY: 'auto' }}>
+      {items.map((item) => {
         const active = isActive(item.href);
         return (
           <Link
             key={item.href}
             href={item.href}
             style={{
-              display: 'block',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '0.625rem 1.5rem',
               color: active ? '#fff' : '#d1d5db',
               textDecoration: 'none',
@@ -75,7 +91,17 @@ export default function SidebarNav() {
               }
             }}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.badge != null && item.badge > 0 && (
+              <span style={{
+                background: '#ef4444', color: '#fff',
+                borderRadius: '9999px', fontSize: '0.65rem', fontWeight: 700,
+                minWidth: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 4px', flexShrink: 0,
+              }}>
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
           </Link>
         );
       })}
