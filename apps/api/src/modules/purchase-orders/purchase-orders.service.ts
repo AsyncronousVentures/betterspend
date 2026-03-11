@@ -2,6 +2,7 @@ import { Injectable, Inject, NotFoundException, BadRequestException } from '@nes
 import { eq } from 'drizzle-orm';
 import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
+import { WebhookEventService } from '../webhooks/webhook-event.service';
 import type { Db } from '@betterspend/db';
 import { purchaseOrders, poLines, poVersions, requisitions } from '@betterspend/db';
 import { z } from 'zod';
@@ -53,6 +54,7 @@ export class PurchaseOrdersService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
+    private readonly webhookEvents: WebhookEventService,
   ) {}
 
   async findAll(organizationId: string, filters?: { status?: string; vendorId?: string }) {
@@ -142,6 +144,7 @@ export class PurchaseOrdersService {
       .set({ status: 'issued', issuedBy, issuedAt: new Date(), updatedAt: new Date() })
       .where(eq(purchaseOrders.id, id))
       .returning();
+    this.webhookEvents.emit(organizationId, 'po.issued', { purchaseOrder: updated });
     return updated;
   }
 

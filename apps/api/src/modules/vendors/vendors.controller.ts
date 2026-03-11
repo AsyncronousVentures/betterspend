@@ -10,9 +10,7 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { VendorsService } from './vendors.service';
 import { vendorSchema } from '@betterspend/shared';
-
-// Temporary: hardcoded org ID until auth is wired up
-const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
+import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 
 @ApiTags('vendors')
 @Controller('vendors')
@@ -21,22 +19,22 @@ export class VendorsController {
 
   @Get()
   @ApiOperation({ summary: 'List all vendors' })
-  findAll() {
-    return this.vendorsService.findAll(DEMO_ORG_ID);
+  findAll(@CurrentOrgId() orgId: string) {
+    return this.vendorsService.findAll(orgId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a vendor by ID' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.findOne(id, DEMO_ORG_ID);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.vendorsService.findOne(id, orgId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a vendor' })
-  create(@Body() body: unknown) {
+  create(@Body() body: unknown, @CurrentOrgId() orgId: string) {
     const parsed = vendorSchema.parse(body);
     return this.vendorsService.create({
-      organizationId: DEMO_ORG_ID,
+      organizationId: orgId,
       ...parsed,
     });
   }
@@ -46,8 +44,9 @@ export class VendorsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
+    @CurrentOrgId() orgId: string,
   ) {
     const parsed = vendorSchema.partial().parse(body);
-    return this.vendorsService.update(id, DEMO_ORG_ID, parsed);
+    return this.vendorsService.update(id, orgId, parsed);
   }
 }

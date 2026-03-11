@@ -3,9 +3,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ApprovalEngineService } from './approval-engine.service';
-
-const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000002';
+import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { CurrentUserId } from '../../common/decorators/current-user-id.decorator';
 
 @ApiTags('approvals')
 @Controller('approvals')
@@ -14,8 +13,8 @@ export class ApprovalsController {
 
   @Get()
   @ApiOperation({ summary: 'List pending approval requests' })
-  listPending() {
-    return this.approvalEngineService.listPending(DEMO_ORG_ID);
+  listPending(@CurrentOrgId() orgId: string) {
+    return this.approvalEngineService.listPending(orgId);
   }
 
   @Get(':id')
@@ -30,8 +29,9 @@ export class ApprovalsController {
   approve(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { comment?: string },
+    @CurrentUserId() userId: string,
   ) {
-    return this.approvalEngineService.processAction(id, DEMO_USER_ID, 'approve', body?.comment);
+    return this.approvalEngineService.processAction(id, userId, 'approve', body?.comment);
   }
 
   @Post(':id/reject')
@@ -40,7 +40,8 @@ export class ApprovalsController {
   reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { comment?: string },
+    @CurrentUserId() userId: string,
   ) {
-    return this.approvalEngineService.processAction(id, DEMO_USER_ID, 'reject', body?.comment);
+    return this.approvalEngineService.processAction(id, userId, 'reject', body?.comment);
   }
 }

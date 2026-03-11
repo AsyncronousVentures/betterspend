@@ -6,10 +6,8 @@ import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { PurchaseOrdersService, createPoSchema, changeOrderSchema } from './purchase-orders.service';
 import { PdfService } from './pdf.service';
-
-// Temporary: hardcoded until auth is wired
-const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000002';
+import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { CurrentUserId } from '../../common/decorators/current-user-id.decorator';
 
 @ApiTags('purchase-orders')
 @Controller('purchase-orders')
@@ -24,28 +22,29 @@ export class PurchaseOrdersController {
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'vendorId', required: false })
   findAll(
+    @CurrentOrgId() orgId: string,
     @Query('status') status?: string,
     @Query('vendorId') vendorId?: string,
   ) {
-    return this.purchaseOrdersService.findAll(DEMO_ORG_ID, { status, vendorId });
+    return this.purchaseOrdersService.findAll(orgId, { status, vendorId });
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get PO detail' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.findOne(id, DEMO_ORG_ID);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.purchaseOrdersService.findOne(id, orgId);
   }
 
   @Get(':id/versions')
   @ApiOperation({ summary: 'Get PO version history' })
-  getVersionHistory(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.getVersionHistory(id, DEMO_ORG_ID);
+  getVersionHistory(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.purchaseOrdersService.getVersionHistory(id, orgId);
   }
 
   @Get(':id/pdf')
   @ApiOperation({ summary: 'Download PO as PDF' })
-  async getPdf(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response) {
-    const po = await this.purchaseOrdersService.findOne(id, DEMO_ORG_ID);
+  async getPdf(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string, @Res() res: Response) {
+    const po = await this.purchaseOrdersService.findOne(id, orgId);
     const pdf = await this.pdfService.generatePoPdf(po as any);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${po.number}.pdf"`);
@@ -54,30 +53,30 @@ export class PurchaseOrdersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a purchase order' })
-  create(@Body() body: unknown) {
+  create(@Body() body: unknown, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
     const parsed = createPoSchema.parse(body);
-    return this.purchaseOrdersService.create(DEMO_ORG_ID, DEMO_USER_ID, parsed);
+    return this.purchaseOrdersService.create(orgId, userId, parsed);
   }
 
   @Post(':id/issue')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Issue a PO (send to vendor)' })
-  issue(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.issue(id, DEMO_ORG_ID, DEMO_USER_ID);
+  issue(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
+    return this.purchaseOrdersService.issue(id, orgId, userId);
   }
 
   @Post(':id/change-order')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Create a change order (bumps version)' })
-  changeOrder(@Param('id', ParseUUIDPipe) id: string, @Body() body: unknown) {
+  changeOrder(@Param('id', ParseUUIDPipe) id: string, @Body() body: unknown, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
     const parsed = changeOrderSchema.parse(body);
-    return this.purchaseOrdersService.createChangeOrder(id, DEMO_ORG_ID, DEMO_USER_ID, parsed);
+    return this.purchaseOrdersService.createChangeOrder(id, orgId, userId, parsed);
   }
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel a PO' })
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.cancel(id, DEMO_ORG_ID);
+  cancel(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.purchaseOrdersService.cancel(id, orgId);
   }
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
 
 interface PO {
   id: string;
@@ -21,6 +21,15 @@ interface InvoiceLine {
   unitPrice: string;
 }
 
+interface OcrExtractedLine { description: string; quantity: number; unitPrice: number; }
+interface OcrJob {
+  id: string; status: string;
+  extractedData?: {
+    invoiceNumber?: string | null; invoiceDate?: string | null; dueDate?: string | null;
+    lines?: OcrExtractedLine[];
+  } | null;
+}
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const [pos, setPOs] = useState<PO[]>([]);
@@ -32,6 +41,11 @@ export default function NewInvoicePage() {
   const [lines, setLines] = useState<InvoiceLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrJobId, setOcrJobId] = useState<string | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/purchase-orders`)
@@ -71,6 +85,62 @@ export default function NewInvoicePage() {
   };
 
   const subtotal = lines.reduce((s, l) => s + parseFloat(l.quantity || '0') * parseFloat(l.unitPrice || '0'), 0);
+
+  // OCR: submit file → create OCR job → poll until done → pre-populate form
+  async function handleOcrUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setOcrLoading(true);
+    setOcrStatus('Uploading…');
+    try {
+      // In production: upload file to MinIO presigned URL, get storageKey back.
+      // For now we submit the filename as the storageKey (stub flow).
+      const storageKey = `ocr-uploads/${Date.now()}-${file.name}`;
+      const res = await fetch(`${API_URL}/ocr/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type, storageKey }),
+      });
+      if (!res.ok) throw new Error('Failed to create OCR job');
+      const job = await res.json() as OcrJob;
+      setOcrJobId(job.id);
+      setOcrStatus('Extracting…');
+
+      // Poll for completion
+      pollRef.current = setInterval(async () => {
+        const pollRes = await fetch(`${API_URL}/ocr/jobs/${job.id}`);
+        if (!pollRes.ok) return;
+        const updated = await pollRes.json() as OcrJob;
+        if (updated.status === 'done') {
+          clearInterval(pollRef.current!);
+          setOcrStatus('Done — fields pre-populated below');
+          setOcrLoading(false);
+          applyOcrData(updated);
+        } else if (updated.status === 'failed') {
+          clearInterval(pollRef.current!);
+          setOcrStatus('Extraction failed — fill in manually');
+          setOcrLoading(false);
+        }
+      }, 1500);
+    } catch {
+      setOcrStatus('Upload failed');
+      setOcrLoading(false);
+    }
+  }
+
+  function applyOcrData(job: OcrJob) {
+    const d = job.extractedData;
+    if (!d) return;
+    if (d.invoiceNumber) setInvoiceNumber(d.invoiceNumber);
+    if (d.invoiceDate) setInvoiceDate(d.invoiceDate.split('T')[0]);
+    if (d.dueDate) setDueDate(d.dueDate.split('T')[0]);
+    if (d.lines && d.lines.length > 0) {
+      setLines(d.lines.map((l, i) => ({
+        poLineId: '', lineNumber: i + 1,
+        description: l.description, quantity: String(l.quantity), unitPrice: String(l.unitPrice),
+      })));
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +183,26 @@ export default function NewInvoicePage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '900px' }}>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: '#111827' }}>Create Invoice</h1>
+
+      {/* OCR Upload */}
+      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0369a1' }}>Upload Invoice (OCR)</div>
+          <div style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '2px' }}>
+            Upload a PDF or image to auto-extract invoice fields
+            {ocrStatus && <span style={{ marginLeft: '0.5rem', color: ocrLoading ? '#0369a1' : '#059669', fontWeight: 500 }}>— {ocrStatus}</span>}
+          </div>
+        </div>
+        <input ref={fileInputRef} type="file" accept=".pdf,image/*" style={{ display: 'none' }} onChange={handleOcrUpload} />
+        <button
+          type="button"
+          disabled={ocrLoading}
+          onClick={() => fileInputRef.current?.click()}
+          style={{ background: '#0369a1', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, cursor: ocrLoading ? 'not-allowed' : 'pointer', opacity: ocrLoading ? 0.7 : 1, whiteSpace: 'nowrap' }}
+        >
+          {ocrLoading ? 'Processing…' : 'Choose File'}
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit}>
         {/* Header */}

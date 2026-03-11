@@ -3,8 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BudgetsService, CreateBudgetInput } from './budgets.service';
-
-const DEMO_ORG_ID = '00000000-0000-0000-0000-000000000001';
+import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
 
 @ApiTags('budgets')
 @Controller('budgets')
@@ -18,12 +17,13 @@ export class BudgetsController {
   @ApiQuery({ name: 'amount', required: true })
   @ApiQuery({ name: 'fiscalYear', required: true })
   checkBudget(
+    @CurrentOrgId() orgId: string,
     @Query('departmentId') departmentId: string,
     @Query('amount') amount: string,
     @Query('fiscalYear') fiscalYear: string,
   ) {
     return this.budgetsService.checkBudget(
-      DEMO_ORG_ID,
+      orgId,
       departmentId,
       parseFloat(amount),
       parseInt(fiscalYear, 10),
@@ -32,19 +32,19 @@ export class BudgetsController {
 
   @Get()
   @ApiOperation({ summary: 'List all budgets' })
-  findAll() {
-    return this.budgetsService.findAll(DEMO_ORG_ID);
+  findAll(@CurrentOrgId() orgId: string) {
+    return this.budgetsService.findAll(orgId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get budget detail' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.budgetsService.findOne(id, DEMO_ORG_ID);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.budgetsService.findOne(id, orgId);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a budget with optional periods' })
-  create(@Body() body: CreateBudgetInput) {
-    return this.budgetsService.create(DEMO_ORG_ID, body);
+  create(@Body() body: CreateBudgetInput, @CurrentOrgId() orgId: string) {
+    return this.budgetsService.create(orgId, body);
   }
 }

@@ -11,3 +11,6 @@ export * from './receiving';
 export * from './invoices';
 export * from './budgets';
 export * from './webhooks';
+export * from './gl';
+export * from './ocr';
+export * from './auth';

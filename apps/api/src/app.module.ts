@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from './database/database.module';
 import { CommonServicesModule } from './common/services/common-services.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
@@ -11,14 +12,28 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { ReceivingModule } from './modules/receiving/receiving.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { GlModule } from './modules/gl/gl.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { OcrModule } from './modules/ocr/ocr.module';
+import { PunchoutModule } from './modules/punchout/punchout.module';
+import { HealthModule } from './modules/health/health.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
+    AuthModule,
     CommonServicesModule,
+    WebhooksModule,
+    GlModule,
+    HealthModule,
     VendorsModule,
     UsersModule,
+    CatalogModule,
     RequisitionsModule,
     PurchaseOrdersModule,
     ApprovalRulesModule,
@@ -26,6 +41,9 @@ import { InvoicesModule } from './modules/invoices/invoices.module';
     BudgetsModule,
     ReceivingModule,
     InvoicesModule,
+    OcrModule,
+    PunchoutModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}
