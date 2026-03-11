@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { api } from '../../lib/api';
 
 interface Vendor { id: string; name: string; }
@@ -225,8 +226,8 @@ export default function CatalogPage() {
             <tbody>
               {items.map((item, idx) => (
                 <tr key={item.id} style={{ borderBottom: idx < items.length - 1 ? '1px solid #f3f4f6' : undefined, opacity: item.isActive ? 1 : 0.5 }}>
-                  <td style={{ padding: '0.875rem 1rem', fontWeight: 600, color: '#111827' }}>
-                    {item.name}
+                  <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
+                    <Link href={`/catalog/${item.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{item.name}</Link>
                     {item.description && <div style={{ fontWeight: 400, fontSize: '0.8rem', color: '#9ca3af', marginTop: '2px' }}>{item.description}</div>}
                   </td>
                   <td style={{ padding: '0.875rem 1rem', fontFamily: 'monospace', fontSize: '0.8rem', color: '#6b7280' }}>{item.sku ?? '—'}</td>
