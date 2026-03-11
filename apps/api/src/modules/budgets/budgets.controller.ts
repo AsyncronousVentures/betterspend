@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query, ParseUUIDPipe,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, ParseUUIDPipe, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BudgetsService, CreateBudgetInput } from './budgets.service';
@@ -52,5 +52,26 @@ export class BudgetsController {
     @CurrentOrgId() orgId: string,
   ) {
     return this.budgetsService.update(id, orgId, body);
+  }
+
+  @Post(':id/periods')
+  @ApiOperation({ summary: 'Add a budget period' })
+  addPeriod(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { periodStart: string; periodEnd: string; allocatedAmount: number },
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.budgetsService.addPeriod(id, orgId, body);
+  }
+
+  @Delete(':id/periods/:periodId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a budget period' })
+  removePeriod(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('periodId', ParseUUIDPipe) periodId: string,
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.budgetsService.removePeriod(id, periodId, orgId);
   }
 }

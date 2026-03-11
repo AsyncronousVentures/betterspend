@@ -151,6 +151,10 @@ export const api = {
     get: (id: string) => apiFetch<any>(`/budgets/${id}`),
     create: (data: unknown) => apiFetch<any>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: unknown) => apiFetch<any>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    addPeriod: (id: string, data: { periodStart: string; periodEnd: string; allocatedAmount: number }) =>
+      apiFetch<any>(`/budgets/${id}/periods`, { method: 'POST', body: JSON.stringify(data) }),
+    removePeriod: (id: string, periodId: string) =>
+      apiFetch<any>(`/budgets/${id}/periods/${periodId}`, { method: 'DELETE' }),
   },
   audit: {
     list: (params?: { entityType?: string; entityId?: string; limit?: number }) => {

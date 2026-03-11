@@ -149,6 +149,30 @@ export class BudgetsService {
     return this.findOne(id, organizationId);
   }
 
+  async addPeriod(
+    id: string,
+    organizationId: string,
+    input: { periodStart: string; periodEnd: string; allocatedAmount: number },
+  ) {
+    await this.findOne(id, organizationId);
+    await this.db.insert(budgetPeriods).values({
+      budgetId: id,
+      periodStart: new Date(input.periodStart),
+      periodEnd: new Date(input.periodEnd),
+      amount: String(input.allocatedAmount),
+      allocatedAmount: String(input.allocatedAmount),
+    });
+    return this.findOne(id, organizationId);
+  }
+
+  async removePeriod(budgetId: string, periodId: string, organizationId: string) {
+    await this.findOne(budgetId, organizationId);
+    await this.db.delete(budgetPeriods).where(
+      and(eq(budgetPeriods.id, periodId), eq(budgetPeriods.budgetId, budgetId)),
+    );
+    return this.findOne(budgetId, organizationId);
+  }
+
   async recordSpend(
     organizationId: string,
     departmentId: string,
