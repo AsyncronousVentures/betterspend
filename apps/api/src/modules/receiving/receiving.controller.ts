@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ReceivingService, CreateGrnInput } from './receiving.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
@@ -25,5 +25,17 @@ export class ReceivingController {
   @ApiOperation({ summary: 'Create a goods receipt (GRN)' })
   create(@Body() body: CreateGrnInput, @CurrentOrgId() orgId: string) {
     return this.receivingService.create(orgId, body);
+  }
+
+  @Patch(':id/confirm')
+  @ApiOperation({ summary: 'Confirm a draft GRN' })
+  confirm(@Param('id') id: string, @CurrentOrgId() orgId: string) {
+    return this.receivingService.confirm(id, orgId);
+  }
+
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancel a GRN' })
+  cancel(@Param('id') id: string, @CurrentOrgId() orgId: string) {
+    return this.receivingService.cancelGrn(id, orgId);
   }
 }

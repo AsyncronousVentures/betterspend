@@ -96,6 +96,21 @@ export class ReceivingService {
     return grn;
   }
 
+  async confirm(id: string, organizationId: string) {
+    const grn = await this.findOne(id, organizationId);
+    if (grn.status === 'confirmed') return grn;
+    if (grn.status === 'cancelled') throw new BadRequestException('Cannot confirm a cancelled GRN');
+    await this.db.update(goodsReceipts).set({ status: 'confirmed', updatedAt: new Date() }).where(eq(goodsReceipts.id, id));
+    return this.findOne(id, organizationId);
+  }
+
+  async cancelGrn(id: string, organizationId: string) {
+    const grn = await this.findOne(id, organizationId);
+    if (grn.status === 'cancelled') return grn;
+    await this.db.update(goodsReceipts).set({ status: 'cancelled', updatedAt: new Date() }).where(eq(goodsReceipts.id, id));
+    return this.findOne(id, organizationId);
+  }
+
   private async updatePoReceiptStatus(poId: string, organizationId: string) {
     // Fetch all GRN lines for this PO to compute received totals
     const po = await this.db.query.purchaseOrders.findFirst({
