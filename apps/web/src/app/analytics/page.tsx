@@ -1,6 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, Cell,
+} from 'recharts';
 import { api } from '../../lib/api';
 import { COLORS, SHADOWS } from '../../lib/theme';
 
@@ -11,6 +15,11 @@ function fmt(n: string | number | null | undefined) {
 function fmtN(n: string | number | null | undefined, dp = 1) {
   if (n == null) return '—';
   return Number(n).toFixed(dp);
+}
+function fmtShort(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n}`;
 }
 
 interface KpiData {
@@ -27,7 +36,6 @@ interface CycleRow    { avgDays: string | null; minDays: string | null; maxDays:
 interface VendorPerfRow { vendorId: string; vendorName: string; invoiceCount: number; exceptionCount: number; exceptionRate: string | null; avgDaysToApprove: string | null; totalApproved: string; poCount: number }
 interface BudgetUtilRow { budgetId: string; budgetName: string; budgetType: string; fiscalYear: number; totalAmount: string; spentAmount: string; utilizationPct: string | null; remaining: string; departmentName: string | null; projectName: string | null }
 
-
 const card: React.CSSProperties = {
   background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '8px', padding: '1.25rem', boxShadow: SHADOWS.card,
 };
@@ -35,16 +43,37 @@ const sectionTitle: React.CSSProperties = {
   fontSize: '0.95rem', fontWeight: 700, color: COLORS.textPrimary, margin: '0 0 1rem',
 };
 
+const AGING_COLORS: Record<string, string> = {
+  '0-30 days':  COLORS.accentGreen,
+  '31-60 days': COLORS.accentAmber,
+  '61-90 days': '#f97316',
+  '90+ days':   COLORS.accentRed,
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: COLORS.cardBg, border: `1px solid ${COLORS.cardBorder}`, borderRadius: '6px', padding: '0.5rem 0.75rem', boxShadow: SHADOWS.dropdown, fontSize: '0.8rem' }}>
+      {label && <div style={{ color: COLORS.textSecondary, marginBottom: '0.25rem', fontWeight: 500 }}>{label}</div>}
+      {payload.map((p: any, i: number) => (
+        <div key={i} style={{ color: p.color ?? COLORS.textPrimary, fontWeight: 600 }}>
+          {p.name ? `${p.name}: ` : ''}{typeof p.value === 'number' ? fmtShort(p.value) : p.value}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function AnalyticsPage() {
-  const [kpis,    setKpis]    = useState<KpiData | null>(null);
-  const [vendors, setVendors] = useState<VendorRow[]>([]);
-  const [depts,   setDepts]   = useState<DeptRow[]>([]);
-  const [monthly, setMonthly] = useState<MonthRow[]>([]);
-  const [aging,   setAging]   = useState<AgingRow[]>([]);
-  const [cycle,       setCycle]       = useState<CycleRow | null>(null);
-  const [vendPerf,    setVendPerf]    = useState<VendorPerfRow[]>([]);
-  const [budgetUtil,  setBudgetUtil]  = useState<BudgetUtilRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [kpis,       setKpis]       = useState<KpiData | null>(null);
+  const [vendors,    setVendors]    = useState<VendorRow[]>([]);
+  const [depts,      setDepts]      = useState<DeptRow[]>([]);
+  const [monthly,    setMonthly]    = useState<MonthRow[]>([]);
+  const [aging,      setAging]      = useState<AgingRow[]>([]);
+  const [cycle,      setCycle]      = useState<CycleRow | null>(null);
+  const [vendPerf,   setVendPerf]   = useState<VendorPerfRow[]>([]);
+  const [budgetUtil, setBudgetUtil] = useState<BudgetUtilRow[]>([]);
+  const [loading,    setLoading]    = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -67,14 +96,29 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', color: COLORS.textMuted, fontSize: '0.875rem' }}>Loading analytics…</div>
+      <div style={{ padding: '2rem', color: COLORS.textMuted, fontSize: '0.875rem' }}>Loading analytics...</div>
     );
   }
 
-  const maxVendor  = Math.max(...vendors.map((v) => Number(v.total)), 1);
-  const maxDept    = Math.max(...depts.map((d) => Number(d.total)), 1);
-  const maxMonthly = Math.max(...monthly.map((m) => Number(m.total)), 1);
-  const totalAging = aging.reduce((s, r) => s + Number(r.total), 0) || 1;
+  // Recharts-ready data
+  const monthlyChartData = monthly.map((m) => ({
+    month: m.month.slice(5), // "MM" from "YYYY-MM"
+    total: Number(m.total),
+    invoices: m.invoiceCount,
+  }));
+
+  const vendorChartData = vendors.slice(0, 10).map((v) => ({
+    name: v.vendorName.length > 20 ? v.vendorName.slice(0, 18) + '…' : v.vendorName,
+    total: Number(v.total),
+    invoices: v.invoiceCount,
+  }));
+
+  const agingChartData = aging.map((a) => ({
+    bucket: a.bucket.replace(' days', '').replace('-', '–'),
+    count: a.count,
+    total: Number(a.total),
+    color: AGING_COLORS[a.bucket] ?? COLORS.textMuted,
+  }));
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px' }}>
@@ -86,100 +130,103 @@ export default function AnalyticsPage() {
       {/* KPI tiles */}
       {kpis && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-          <KpiTile label="Active POs" value={String(kpis.purchaseOrders.active ?? 0)} sub={`${kpis.purchaseOrders.total} total`} />
-          <KpiTile label="PO Spend" value={fmt(kpis.purchaseOrders.totalValue)} sub="all time" />
-          <KpiTile label="Invoices Paid" value={fmt(kpis.invoices.paid)} sub={`${fmt(kpis.invoices.pending)} pending`} />
+          <KpiTile label="Active POs"      value={String(kpis.purchaseOrders.active ?? 0)} sub={`${kpis.purchaseOrders.total} total`} />
+          <KpiTile label="PO Spend"        value={fmt(kpis.purchaseOrders.totalValue)} sub="all time" />
+          <KpiTile label="Invoices Paid"   value={fmt(kpis.invoices.paid)} sub={`${fmt(kpis.invoices.pending)} pending`} />
           <KpiTile label="Budget (active)" value={fmt(kpis.budgets.totalBudget)} sub={`${kpis.requisitions.total} active reqs`} />
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-        {/* Spend by vendor */}
-        <div style={card}>
-          <h2 style={sectionTitle}>Spend by Vendor</h2>
-          {vendors.length === 0 ? (
-            <Empty text="No approved invoices yet" />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-              {vendors.map((v) => (
-                <BarRow
-                  key={v.vendorId}
-                  label={v.vendorName}
-                  value={fmt(v.total)}
-                  pct={(Number(v.total) / maxVendor) * 100}
-                  sub={`${v.invoiceCount} invoice${v.invoiceCount !== 1 ? 's' : ''}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Spend by department */}
-        <div style={card}>
-          <h2 style={sectionTitle}>Spend by Department</h2>
-          {depts.length === 0 ? (
-            <Empty text="No active purchase orders yet" />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-              {depts.map((d) => (
-                <BarRow
-                  key={d.department}
-                  label={d.department}
-                  value={fmt(d.total)}
-                  pct={(Number(d.total) / maxDept) * 100}
-                  sub={`${d.poCount} PO${d.poCount !== 1 ? 's' : ''}`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Monthly Spend Trend — LineChart */}
+      <div style={{ ...card, marginBottom: '1.25rem' }}>
+        <h2 style={sectionTitle}>Monthly Spend Trend (Last 12 Months)</h2>
+        {monthlyChartData.length === 0 ? (
+          <Empty text="No approved invoices in the past 12 months" />
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={monthlyChartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={COLORS.tableBorder} vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} width={52} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke={COLORS.accentBlue}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: COLORS.accentBlue, strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: COLORS.accentBlueDark }}
+                name="Spend"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* Monthly spend + invoice aging */}
       <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-        {/* Monthly trend */}
+        {/* Spend by Vendor — horizontal BarChart */}
         <div style={card}>
-          <h2 style={sectionTitle}>Monthly Spend (Last 12 Months)</h2>
-          {monthly.length === 0 ? (
-            <Empty text="No approved invoices in past 12 months" />
+          <h2 style={sectionTitle}>Spend by Vendor (Top 10)</h2>
+          {vendorChartData.length === 0 ? (
+            <Empty text="No approved invoices yet" />
           ) : (
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '140px' }}>
-              {monthly.map((m) => {
-                const pct = (Number(m.total) / maxMonthly) * 100;
-                return (
-                  <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }} title={`${m.month}: ${fmt(m.total)}`}>
-                    <div style={{ width: '100%', background: COLORS.accentBlueDark, borderRadius: '3px 3px 0 0', height: `${Math.max(pct, 2)}%`, transition: 'height 0.3s' }} />
-                    <div style={{ fontSize: '0.6rem', color: COLORS.textSecondary, marginTop: '4px', textAlign: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', maxHeight: '36px', overflow: 'hidden' }}>{m.month.slice(5)}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <ResponsiveContainer width="100%" height={Math.max(vendorChartData.length * 36, 180)}>
+              <BarChart
+                layout="vertical"
+                data={vendorChartData}
+                margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+                barSize={14}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.tableBorder} horizontal={false} />
+                <XAxis type="number" tickFormatter={fmtShort} tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: COLORS.textSecondary }} width={110} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="total" fill={COLORS.accentBlue} radius={[0, 3, 3, 0]} name="Spend" />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
 
-        {/* Invoice aging */}
+        {/* Invoice Aging — BarChart */}
         <div style={card}>
           <h2 style={sectionTitle}>Invoice Aging</h2>
-          {aging.length === 0 ? (
+          {agingChartData.length === 0 ? (
             <Empty text="No outstanding invoices" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {aging.map((a) => {
-                const pct = (Number(a.total) / totalAging) * 100;
-                const color = a.bucket === '0-30 days' ? COLORS.accentGreen : a.bucket === '31-60 days' ? COLORS.accentAmber : a.bucket === '61-90 days' ? '#f97316' : COLORS.accentRed;
-                return (
-                  <div key={a.bucket}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
-                      <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>{a.bucket}</span>
-                      <span style={{ color: COLORS.textSecondary }}>{fmt(a.total)} ({a.count})</span>
+            <>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={agingChartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barSize={32}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.tableBorder} vertical={false} />
+                  <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={(v) => String(v)} tick={{ fontSize: 11, fill: COLORS.textMuted }} axisLine={false} tickLine={false} width={28} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="count" name="Invoices" radius={[3, 3, 0, 0]}>
+                    {agingChartData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {/* Aging detail rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                {aging.map((a) => {
+                  const totalAging = aging.reduce((s, r) => s + Number(r.total), 0) || 1;
+                  const pct = (Number(a.total) / totalAging) * 100;
+                  const color = AGING_COLORS[a.bucket] ?? COLORS.textMuted;
+                  return (
+                    <div key={a.bucket}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: '3px' }}>
+                        <span style={{ color: COLORS.textSecondary, fontWeight: 500 }}>{a.bucket}</span>
+                        <span style={{ color: COLORS.textSecondary }}>{fmt(a.total)} ({a.count})</span>
+                      </div>
+                      <div style={{ background: COLORS.contentBg, borderRadius: '4px', height: '6px' }}>
+                        <div style={{ background: color, width: `${pct}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+                      </div>
                     </div>
-                    <div style={{ background: COLORS.contentBg, borderRadius: '4px', height: '8px' }}>
-                      <div style={{ background: color, width: `${pct}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -187,7 +234,7 @@ export default function AnalyticsPage() {
       {/* PO cycle time */}
       {cycle && (
         <div style={{ ...card, marginBottom: '1.25rem' }}>
-          <h2 style={sectionTitle}>PO Cycle Time (Draft → Issued)</h2>
+          <h2 style={sectionTitle}>PO Cycle Time (Draft to Issued)</h2>
           {!cycle.avgDays ? (
             <Empty text="No issued purchase orders yet" />
           ) : (
@@ -230,12 +277,12 @@ export default function AnalyticsPage() {
                       <td style={{ padding: '0.625rem 0.75rem', color: Number(b.remaining) < 0 ? COLORS.accentRed : COLORS.textSecondary, fontWeight: Number(b.remaining) < 0 ? 600 : 400 }}>
                         {fmt(b.remaining)}
                       </td>
-                      <td style={{ padding: '0.625rem 0.75rem', minWidth: '120px' }}>
+                      <td style={{ padding: '0.625rem 0.75rem', minWidth: '140px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div style={{ flex: 1, background: COLORS.tableBorder, borderRadius: 4, height: 6 }}>
-                            <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor, height: 6, borderRadius: 4 }} />
+                          <div style={{ flex: 1, background: COLORS.tableBorder, borderRadius: 4, height: 8 }}>
+                            <div style={{ width: `${Math.min(pct, 100)}%`, background: barColor, height: 8, borderRadius: 4, transition: 'width 0.4s' }} />
                           </div>
-                          <span style={{ fontSize: '0.75rem', color: pct >= 80 ? barColor : COLORS.textSecondary, fontWeight: pct >= 80 ? 600 : 400, minWidth: '36px', textAlign: 'right' }}>
+                          <span style={{ fontSize: '0.75rem', color: pct >= 80 ? barColor : COLORS.textSecondary, fontWeight: pct >= 80 ? 600 : 400, minWidth: '38px', textAlign: 'right' }}>
                             {b.utilizationPct != null ? `${b.utilizationPct}%` : '—'}
                           </span>
                         </div>
@@ -299,20 +346,6 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub: str
       <div style={{ fontSize: '0.78rem', fontWeight: 500, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</div>
       <div style={{ fontSize: '1.5rem', fontWeight: 700, color: COLORS.textPrimary }}>{value}</div>
       <div style={{ fontSize: '0.78rem', color: COLORS.textMuted, marginTop: '0.25rem' }}>{sub}</div>
-    </div>
-  );
-}
-
-function BarRow({ label, value, pct, sub }: { label: string; value: string; pct: number; sub: string }) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
-        <span style={{ color: COLORS.textPrimary, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{label}</span>
-        <span style={{ color: COLORS.textSecondary, fontWeight: 600 }}>{value} <span style={{ color: COLORS.textMuted, fontWeight: 400 }}>· {sub}</span></span>
-      </div>
-      <div style={{ background: COLORS.contentBg, borderRadius: '4px', height: '6px' }}>
-        <div style={{ background: COLORS.accentBlueDark, width: `${Math.max(pct, 2)}%`, height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
-      </div>
     </div>
   );
 }

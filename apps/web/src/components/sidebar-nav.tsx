@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { signOut } from '../lib/auth-client';
 import { api } from '../lib/api';
 import { COLORS } from '../lib/theme';
+import { useBranding } from '../lib/branding';
 
 /* ── Types ── */
 
@@ -73,6 +74,7 @@ const NAV_CONFIG: NavEntry[] = [
     label: 'Organization',
     children: [
       { label: 'Vendors', href: '/vendors' },
+      { label: 'Contracts', href: '/contracts' },
       { label: 'Users', href: '/users' },
       { label: 'Departments', href: '/departments' },
       { label: 'Projects', href: '/projects' },
@@ -120,6 +122,7 @@ export default function SidebarNav({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState(0);
+  const branding = useBranding();
 
   // Determine which groups should be open initially
   const getInitialOpen = useCallback(() => {
@@ -354,7 +357,7 @@ export default function SidebarNav({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
 
-      {/* Credit */}
+      {/* Copyright / branding footer */}
       <div style={{
         padding: '0.625rem 1.25rem',
         borderTop: `1px solid ${COLORS.sidebarBorder}`,
@@ -362,7 +365,10 @@ export default function SidebarNav({ onClose }: { onClose?: () => void }) {
         color: COLORS.sidebarGroupLabel,
         lineHeight: 1.5,
       }}>
-        <div style={{ opacity: 0.8 }}>&copy; Asynchronous Ventures LLC</div>
+        <div style={{ opacity: 0.8 }}>{branding.copyright_text}</div>
+        {branding.hide_powered_by !== 'true' && (
+          <div style={{ opacity: 0.5, marginTop: '0.125rem' }}>Powered by BetterSpend</div>
+        )}
       </div>
     </>
   );
