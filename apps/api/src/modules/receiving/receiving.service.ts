@@ -5,6 +5,7 @@ import type { Db } from '@betterspend/db';
 import { goodsReceipts, goodsReceiptLines, purchaseOrders, poLines } from '@betterspend/db';
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
+import { AuditService } from '../audit/audit.service';
 
 export interface CreateGrnInput {
   purchaseOrderId: string;
@@ -26,6 +27,7 @@ export class ReceivingService {
     @Inject(DB_TOKEN) private readonly db: Db,
     private readonly sequenceService: SequenceService,
     private readonly webhookEvents: WebhookEventService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(organizationId: string) {
@@ -93,6 +95,7 @@ export class ReceivingService {
 
     const grn = await this.findOne(grnId, organizationId);
     this.webhookEvents.emit(organizationId, 'grn.created', { goodsReceipt: grn });
+    this.audit.log(organizationId, input.receivedBy, 'goods_receipt', grnId, 'created', { purchaseOrderId: input.purchaseOrderId }).catch(() => {});
     return grn;
   }
 

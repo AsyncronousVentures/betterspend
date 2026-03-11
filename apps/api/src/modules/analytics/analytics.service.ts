@@ -203,7 +203,7 @@ export class AnalyticsService {
         al.created_at AS "createdAt",
         u.name AS "userName"
       FROM audit_log al
-      LEFT JOIN users u ON u.id = al.performed_by
+      LEFT JOIN users u ON u.id = al.user_id
       WHERE al.organization_id = ${organizationId}
       ORDER BY al.created_at DESC
       LIMIT ${limit}
