@@ -111,7 +111,15 @@ export const api = {
     get: (id: string) => apiFetch<any>(`/purchase-orders/${id}`),
     create: (data: unknown) => apiFetch<any>('/purchase-orders', { method: 'POST', body: JSON.stringify(data) }),
     issue: (id: string) => apiFetch<any>(`/purchase-orders/${id}/issue`, { method: 'POST' }),
+    cancel: (id: string) => apiFetch<any>(`/purchase-orders/${id}/cancel`, { method: 'POST' }),
     changeOrder: (id: string, data: unknown) => apiFetch<any>(`/purchase-orders/${id}/change-order`, { method: 'POST', body: JSON.stringify(data) }),
+    versions: (id: string) => apiFetch<any[]>(`/purchase-orders/${id}/versions`),
+    pdf: (id: string) => {
+      const token = getCookie('bs_token');
+      return fetch(`${API_BASE}/api/v1/purchase-orders/${id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    },
   },
   invoices: {
     list: () => apiFetch<any[]>('/invoices'),
