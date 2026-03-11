@@ -3,8 +3,10 @@ import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('reports')
+@Roles('finance', 'admin', 'approver')
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

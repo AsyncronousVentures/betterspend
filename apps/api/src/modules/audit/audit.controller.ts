@@ -2,8 +2,10 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { CurrentOrgId } from '../../common/decorators/current-org-id.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('audit')
+@Roles('admin', 'finance')
 @Controller('audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
