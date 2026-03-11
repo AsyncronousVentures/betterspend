@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Catalog', href: '/catalog' },
   { label: 'Receiving', href: '/receiving' },
   { label: 'Invoices', href: '/invoices' },
+  { label: 'OCR Jobs', href: '/ocr' },
   { label: 'Budgets', href: '/budgets' },
   { label: 'GL Integration', href: '/gl-mappings' },
   { label: 'Webhooks', href: '/webhooks' },
