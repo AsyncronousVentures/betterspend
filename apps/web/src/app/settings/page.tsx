@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
-
-function getCookie(name: string) {
-  if (typeof document === 'undefined') return undefined;
-  return document.cookie.split('; ').find((r) => r.startsWith(name + '='))?.split('=')[1];
-}
+import { api } from '../../lib/api';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'org' | 'password'>('org');
@@ -30,17 +24,9 @@ export default function SettingsPage() {
     }
     setPwSaving(true);
     try {
-      const token = getCookie('bs_token');
-      const res = await fetch(`${API_BASE}/api/auth/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          currentPassword: pwForm.currentPassword,
-          newPassword: pwForm.newPassword,
-        }),
+      const res = await api.auth.changePassword({
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
       });
       if (res.ok) {
         setPwMsg('Password changed successfully.');
@@ -82,7 +68,7 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <InfoRow label="Organization ID" value="00000000-0000-0000-0000-000000000001" mono />
             <InfoRow label="Demo Org" value="Acme Corp (Demo)" />
-            <InfoRow label="API Base" value={API_BASE} mono />
+            <InfoRow label="API Base" value={process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001'} mono />
             <InfoRow label="Version" value="BetterSpend v1.0.0-beta" />
           </div>
           <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fef9c3', borderRadius: '6px', border: '1px solid #fde68a' }}>

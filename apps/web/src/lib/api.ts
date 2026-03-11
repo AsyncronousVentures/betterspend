@@ -155,6 +155,16 @@ export const api = {
       return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     },
   },
+  auth: {
+    changePassword: (data: { currentPassword: string; newPassword: string }) => {
+      const token = getCookie('bs_token');
+      return fetch(`${API_BASE}/api/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(data),
+      });
+    },
+  },
   ocr: {
     createJob: (data: unknown) => apiFetch<any>('/ocr/jobs', { method: 'POST', body: JSON.stringify(data) }),
     getJob: (id: string) => apiFetch<any>(`/ocr/jobs/${id}`),

@@ -1,22 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
-
-function getCookie(name: string) {
-  if (typeof document === 'undefined') return undefined;
-  return document.cookie.split('; ').find((r) => r.startsWith(name + '='))?.split('=')[1];
-}
-
-async function apiFetch<T>(path: string): Promise<T> {
-  const token = getCookie('bs_token');
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
-    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+import { api } from '../../lib/api';
 
 const ENTITY_COLORS: Record<string, string> = {
   requisition: '#eff6ff',
@@ -53,10 +38,7 @@ export default function AuditPage() {
   async function load() {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filterEntity) params.set('entityType', filterEntity);
-      params.set('limit', '200');
-      const data = await apiFetch<any[]>(`/audit?${params}`);
+      const data = await api.audit.list({ entityType: filterEntity || undefined, limit: 200 });
       setEntries(data);
     } catch (e: any) {
       console.error(e);
