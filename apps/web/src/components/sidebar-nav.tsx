@@ -17,6 +17,7 @@ const navItems = [
   { label: 'OCR Jobs', href: '/ocr' },
   { label: 'Budgets', href: '/budgets' },
   { label: 'GL Integration', href: '/gl-mappings' },
+  { label: 'GL Export Jobs', href: '/gl-export-jobs' },
   { label: 'Webhooks', href: '/webhooks' },
   { label: 'Approval Rules', href: '/approval-rules' },
   { label: 'Users', href: '/users' },
