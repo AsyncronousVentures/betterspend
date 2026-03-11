@@ -144,6 +144,20 @@ export class InvoicesService {
     return this.matchingService.runMatch(id);
   }
 
+  async markPaid(id: string, organizationId: string, userId: string) {
+    const invoice = await this.findOne(id, organizationId);
+    if ((invoice as any).status !== 'approved') {
+      throw new BadRequestException('Only approved invoices can be marked as paid');
+    }
+    await this.db.update(invoices)
+      .set({ status: 'paid', updatedAt: new Date() } as any)
+      .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)));
+    const updated = await this.findOne(id, organizationId);
+    this.audit.log(organizationId, userId, 'invoice', id, 'paid', { totalAmount: (updated as any).totalAmount }).catch(() => {});
+    this.webhookEvents.emit(organizationId, 'invoice.paid', { invoice: updated });
+    return updated;
+  }
+
   async approve(id: string, organizationId: string, approverId: string) {
     const invoice = await this.findOne(id, organizationId);
     if (invoice.matchStatus === 'exception') {

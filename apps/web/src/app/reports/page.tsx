@@ -71,6 +71,12 @@ const REPORTS: Report[] = [
     endpoint: '/reports/department-spend/csv',
   },
   {
+    id: 'ap-aging',
+    title: 'AP Aging',
+    description: 'Overdue unpaid invoices grouped by aging bucket (0-30, 31-60, 61-90, 90+ days).',
+    endpoint: '/reports/ap-aging/csv',
+  },
+  {
     id: 'grn',
     title: 'Goods Receipts',
     description: 'All GRNs with PO, vendor, received date, and quantities.',

@@ -39,4 +39,10 @@ export class InvoicesController {
   approve(@Param('id') id: string, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
     return this.invoicesService.approve(id, orgId, userId);
   }
+
+  @Patch(':id/mark-paid')
+  @ApiOperation({ summary: 'Mark an approved invoice as paid' })
+  markPaid(@Param('id') id: string, @CurrentOrgId() orgId: string, @CurrentUserId() userId: string) {
+    return this.invoicesService.markPaid(id, orgId, userId);
+  }
 }

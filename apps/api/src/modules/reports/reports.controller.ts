@@ -73,6 +73,15 @@ export class ReportsController {
     res.send(csv);
   }
 
+  @Get('ap-aging/csv')
+  @ApiOperation({ summary: 'Export AP aging report as CSV' })
+  async exportApAging(@CurrentOrgId() orgId: string, @Res() res: Response) {
+    const csv = await this.reportsService.exportApAging(orgId);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="ap-aging.csv"');
+    res.send(csv);
+  }
+
   @Get('goods-receipts/csv')
   @ApiOperation({ summary: 'Export goods receipts summary as CSV' })
   async exportGrnSummary(@CurrentOrgId() orgId: string, @Res() res: Response) {

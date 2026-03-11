@@ -67,7 +67,7 @@ export default function HomePage() {
   const bud = kpis?.budgets;
 
   const totalActions = pending
-    ? (pending.pendingApprovals ?? 0) + (pending.invoiceExceptions ?? 0)
+    ? (pending.pendingApprovals ?? 0) + (pending.invoiceExceptions ?? 0) + (pending.overdueInvoices ?? 0)
     : 0;
 
   return (
@@ -112,6 +112,7 @@ export default function HomePage() {
               <ActionItem label="Invoice Exceptions" count={pending.invoiceExceptions ?? 0} href="/invoices" urgent />
               <ActionItem label="Requisitions Awaiting Approval" count={pending.requisitionsPendingApproval ?? 0} href="/requisitions" />
               <ActionItem label="POs Awaiting First Receipt" count={pending.posAwaitingReceipt ?? 0} href="/receiving" />
+              <ActionItem label="Overdue Invoices" count={pending.overdueInvoices ?? 0} href="/invoices" urgent />
             </div>
           )}
         </div>

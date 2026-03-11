@@ -121,6 +121,7 @@ export const api = {
       apiFetch<any>(`/purchase-orders/${id}/releases`, { method: 'POST', body: JSON.stringify(data) }),
     cancelRelease: (id: string, releaseId: string) =>
       apiFetch<any>(`/purchase-orders/${id}/releases/${releaseId}`, { method: 'DELETE' }),
+    receivingSummary: (id: string) => apiFetch<any[]>(`/purchase-orders/${id}/receiving-summary`),
     pdf: (id: string) => {
       const token = getCookie('bs_token');
       return fetch(`${API_BASE}/api/v1/purchase-orders/${id}/pdf`, {
@@ -132,7 +133,8 @@ export const api = {
     list: () => apiFetch<any[]>('/invoices'),
     get: (id: string) => apiFetch<any>(`/invoices/${id}`),
     create: (data: unknown) => apiFetch<any>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
-    approve: (id: string) => apiFetch<any>(`/invoices/${id}/approve`, { method: 'POST' }),
+    approve: (id: string) => apiFetch<any>(`/invoices/${id}/approve`, { method: 'PATCH' }),
+    markPaid: (id: string) => apiFetch<any>(`/invoices/${id}/mark-paid`, { method: 'PATCH' }),
     rerunMatch: (id: string) => apiFetch<any>(`/invoices/${id}/match`, { method: 'POST' }),
   },
   approvals: {
