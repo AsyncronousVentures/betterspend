@@ -112,6 +112,7 @@ export const api = {
     list: () => apiFetch<any[]>('/gl/export-jobs'),
     trigger: (invoiceId: string, targetSystem: string) =>
       apiFetch<any>(`/gl/export-jobs/trigger/${invoiceId}?targetSystem=${targetSystem}`, { method: 'POST' }),
+    retry: (id: string) => apiFetch<any>(`/gl/export-jobs/${id}/retry`, { method: 'POST' }),
   },
   requisitions: {
     list: () => apiFetch<any[]>('/requisitions'),
@@ -146,6 +147,7 @@ export const api = {
     get: (id: string) => apiFetch<any>(`/invoices/${id}`),
     create: (data: unknown) => apiFetch<any>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
     approve: (id: string) => apiFetch<any>(`/invoices/${id}/approve`, { method: 'PATCH' }),
+    bulkApprove: (ids: string[]) => apiFetch<any[]>('/invoices/bulk-approve', { method: 'POST', body: JSON.stringify({ ids }) }),
     markPaid: (id: string) => apiFetch<any>(`/invoices/${id}/mark-paid`, { method: 'PATCH' }),
     rerunMatch: (id: string) => apiFetch<any>(`/invoices/${id}/match`, { method: 'POST' }),
   },

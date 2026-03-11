@@ -166,6 +166,64 @@ export class GlExportService {
     });
   }
 
+  async retryJob(jobId: string, organizationId: string): Promise<void> {
+    const job = await this.db.query.glExportJobs.findFirst({
+      where: (j, { and, eq: eqFn }) => and(eqFn(j.id, jobId), eqFn(j.organizationId, organizationId)),
+    });
+    if (!job) throw new Error(`GL export job ${jobId} not found`);
+    // Reset to pending then re-process
+    await this.db.update(glExportJobs).set({ status: 'pending', errorMessage: null, updatedAt: new Date() }).where(eq(glExportJobs.id, jobId));
+    setImmediate(() => {
+      this.processExportForJob(jobId, organizationId, job.invoiceId, job.targetSystem as GlTargetSystem).catch((err: unknown) =>
+        this.logger.error(`GL retry failed for job ${jobId}: ${String(err)}`),
+      );
+    });
+  }
+
+  private async processExportForJob(jobId: string, organizationId: string, invoiceId: string, targetSystem: GlTargetSystem): Promise<void> {
+    try {
+      const invoice = await this.db.query.invoices.findFirst({
+        where: (i, { eq: eqFn }) => eqFn(i.id, invoiceId),
+        with: { vendor: true, lines: true },
+      });
+      if (!invoice) { await this.markJobById(jobId, 'failed', 'Invoice not found', null, null); return; }
+
+      const exportLines: GlExportLine[] = [];
+      const unmappedAccounts: string[] = [];
+      for (const line of invoice.lines as Array<{ lineNumber: string; description: string; quantity: string; unitPrice: string; totalPrice: string; glAccount: string | null; }>) {
+        let externalCode: string | null = null;
+        let externalName: string | null = null;
+        let unmapped = false;
+        if (line.glAccount) {
+          const mapping = await this.glMappingsService.findByGlAccount(organizationId, line.glAccount, targetSystem);
+          if (mapping) { externalCode = mapping.externalAccountCode; externalName = mapping.externalAccountName ?? null; }
+          else { unmapped = true; if (!unmappedAccounts.includes(line.glAccount)) unmappedAccounts.push(line.glAccount); }
+        } else { unmapped = true; }
+        exportLines.push({ lineNumber: Number(line.lineNumber), description: line.description, quantity: parseFloat(line.quantity), unitPrice: parseFloat(line.unitPrice), totalPrice: parseFloat(line.totalPrice), glAccount: line.glAccount, externalAccountCode: externalCode, externalAccountName: externalName, unmapped });
+      }
+      const vendor = invoice.vendor as { name: string } | null;
+      const payload: GlExportPayload = {
+        invoiceId: invoice.id, internalNumber: invoice.internalNumber, invoiceNumber: invoice.invoiceNumber,
+        vendorName: vendor?.name ?? 'Unknown Vendor', invoiceDate: invoice.invoiceDate.toISOString(),
+        dueDate: invoice.dueDate ? invoice.dueDate.toISOString() : null, currency: invoice.currency,
+        totalAmount: parseFloat(invoice.totalAmount), lines: exportLines, unmappedAccounts,
+      };
+      const allUnmapped = exportLines.length > 0 && exportLines.every((l) => l.unmapped);
+      if (allUnmapped) { await this.markJobById(jobId, 'skipped', `No GL mappings found for ${targetSystem}`, payload, null); return; }
+      const externalId = `${targetSystem.toUpperCase()}-PENDING-${invoice.internalNumber}`;
+      await this.markJobById(jobId, 'exported', null, payload, externalId);
+    } catch (err: unknown) {
+      await this.markJobById(jobId, 'failed', String(err), null, null);
+    }
+  }
+
+  private async markJobById(id: string, status: string, errorMessage: string | null, payload: GlExportPayload | null, externalId: string | null) {
+    await this.db.update(glExportJobs).set({
+      status, attempts: 1, errorMessage, payload: payload as Record<string, unknown> | null,
+      externalId, exportedAt: status === 'exported' ? new Date() : null, updatedAt: new Date(),
+    }).where(eq(glExportJobs.id, id));
+  }
+
   async findAll(organizationId: string) {
     return this.db.query.glExportJobs.findMany({
       where: (j, { eq }) => eq(j.organizationId, organizationId),

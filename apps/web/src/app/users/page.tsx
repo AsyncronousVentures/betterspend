@@ -60,7 +60,7 @@ export default function UsersPage() {
       }
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -71,7 +71,7 @@ export default function UsersPage() {
       setNewRole('requester');
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -81,7 +81,7 @@ export default function UsersPage() {
       await api.users.removeRole(userId, roleId);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 

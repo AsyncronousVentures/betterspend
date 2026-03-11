@@ -78,6 +78,7 @@ export default function GlMappingsPage() {
   const [filterSystem, setFilterSystem] = useState<TargetSystem | ''>('');
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const [form, setForm] = useState({
     glAccount: '', glAccountName: '', targetSystem: 'qbo' as TargetSystem,
     externalAccountCode: '', externalAccountName: '',
@@ -111,10 +112,11 @@ export default function GlMappingsPage() {
         externalAccountName: form.externalAccountName || undefined,
       });
       setShowForm(false);
+      setFormError('');
       setForm({ glAccount: '', glAccountName: '', targetSystem: 'qbo', externalAccountCode: '', externalAccountName: '' });
       await loadMappings();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create mapping');
+      setFormError(err instanceof Error ? err.message : 'Failed to create mapping');
     } finally {
       setSaving(false);
     }
@@ -219,6 +221,7 @@ export default function GlMappingsPage() {
                 />
               </div>
             </div>
+            {formError && <div style={{ marginBottom: '0.75rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#991b1b', fontSize: '0.875rem' }}>{formError}</div>}
             <button type="submit" style={btnPrimary} disabled={saving}>
               {saving ? 'Saving…' : 'Save Mapping'}
             </button>
