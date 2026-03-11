@@ -1,0 +1,142 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+const ROLES = ['admin', 'approver', 'requester', 'receiver', 'finance'];
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [addRoleUserId, setAddRoleUserId] = useState<string | null>(null);
+  const [newRole, setNewRole] = useState('requester');
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function load() {
+    try {
+      setLoading(true);
+      const data = await api.users.list();
+      setUsers(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleActive(user: any) {
+    try {
+      if (user.isActive) {
+        await api.users.deactivate(user.id);
+      } else {
+        await api.users.activate(user.id);
+      }
+      await load();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  async function handleAddRole(userId: string) {
+    try {
+      await api.users.addRole(userId, { role: newRole, scopeType: 'global' });
+      setAddRoleUserId(null);
+      setNewRole('requester');
+      await load();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  async function handleRemoveRole(userId: string, roleId: string) {
+    if (!confirm('Remove this role?')) return;
+    try {
+      await api.users.removeRole(userId, roleId);
+      await load();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>Users</h1>
+      </div>
+
+      {error && <div style={{ color: '#dc2626', marginBottom: '1rem' }}>{error}</div>}
+      {loading ? (
+        <p style={{ color: '#6b7280' }}>Loading...</p>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['Name', 'Email', 'Status', 'Roles', 'Actions'].map((h) => (
+                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user, i) => (
+                <tr key={user.id} style={{ borderBottom: i < users.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  <td style={{ padding: '0.875rem 1rem', fontWeight: 500, color: '#111827' }}>{user.name}</td>
+                  <td style={{ padding: '0.875rem 1rem', color: '#6b7280', fontSize: '0.875rem' }}>{user.email}</td>
+                  <td style={{ padding: '0.875rem 1rem' }}>
+                    <span style={{
+                      display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600,
+                      background: user.isActive ? '#dcfce7' : '#fee2e2',
+                      color: user.isActive ? '#15803d' : '#dc2626',
+                    }}>
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.875rem 1rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                      {(user.userRoles || []).map((r: any) => (
+                        <span key={r.id} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                          padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem',
+                          background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe',
+                        }}>
+                          {r.role}
+                          <button onClick={() => handleRemoveRole(user.id, r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#93c5fd', fontSize: '0.75rem', padding: 0, lineHeight: 1 }}>×</button>
+                        </span>
+                      ))}
+                      {addRoleUserId === user.id ? (
+                        <span style={{ display: 'inline-flex', gap: '0.25rem' }}>
+                          <select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ fontSize: '0.75rem', padding: '0.15rem', border: '1px solid #d1d5db', borderRadius: '4px' }}>
+                            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          <button onClick={() => handleAddRole(user.id)} style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Add</button>
+                          <button onClick={() => setAddRoleUserId(null)} style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setAddRoleUserId(user.id)} style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer' }}>+ Role</button>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ padding: '0.875rem 1rem' }}>
+                    <button
+                      onClick={() => toggleActive(user)}
+                      style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: user.isActive ? '#dc2626' : '#15803d' }}
+                    >
+                      {user.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && (
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af' }}>No users found.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

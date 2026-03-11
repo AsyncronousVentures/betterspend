@@ -16,6 +16,14 @@ const navItems = [
   { label: 'Invoices', href: '/invoices' },
   { label: 'Budgets', href: '/budgets' },
   { label: 'GL Integration', href: '/gl-mappings' },
+  { label: 'Webhooks', href: '/webhooks' },
+  { label: 'Approval Rules', href: '/approval-rules' },
+  { label: 'Users', href: '/users' },
+  { label: 'Departments', href: '/departments' },
+  { label: 'Projects', href: '/projects' },
+  { label: 'Reports', href: '/reports' },
+  { label: 'Audit Log', href: '/audit' },
+  { label: 'Settings', href: '/settings' },
 ];
 
 export default function SidebarNav() {
