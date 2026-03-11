@@ -51,6 +51,7 @@ function formatCurrency(amount: string | number | null, currency = 'USD') {
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     api.invoices.list()
@@ -59,25 +60,45 @@ export default function InvoicesPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filtered = statusFilter ? invoices.filter((i) => i.status === statusFilter) : invoices;
+
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#111827' }}>Invoices</h1>
           <p style={{ margin: '0.25rem 0 0', color: '#6b7280', fontSize: '0.875rem' }}>Vendor invoices with 3-way match status</p>
         </div>
-        <Link href="/invoices/new" style={{ background: '#111827', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
-          + New Invoice
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ padding: '0.4rem 0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', color: '#374151' }}
+          >
+            <option value="">All Statuses</option>
+            <option value="pending_match">Pending Match</option>
+            <option value="matched">Matched</option>
+            <option value="partial_match">Partial Match</option>
+            <option value="exception">Exception</option>
+            <option value="approved">Approved</option>
+          </select>
+          <Link href="/invoices/new" style={{ background: '#111827', color: '#fff', padding: '0.5rem 1.25rem', borderRadius: '6px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 500 }}>
+            + New Invoice
+          </Link>
+        </div>
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>Loading…</div>
-        ) : invoices.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#9ca3af' }}>
-            <p style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#6b7280', fontWeight: 500 }}>No invoices yet</p>
-            <p style={{ fontSize: '0.875rem' }}>Create an invoice to run 3-way matching against a PO and GRN.</p>
+            <p style={{ fontSize: '1rem', marginBottom: '0.5rem', color: '#6b7280', fontWeight: 500 }}>
+              {statusFilter ? `No ${statusFilter.replace(/_/g, ' ')} invoices` : 'No invoices yet'}
+            </p>
+            <p style={{ fontSize: '0.875rem' }}>
+              {statusFilter ? 'Try a different filter.' : 'Create an invoice to run 3-way matching against a PO and GRN.'}
+            </p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
@@ -89,8 +110,8 @@ export default function InvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((inv, idx) => (
-                <tr key={inv.id} style={{ borderBottom: idx < invoices.length - 1 ? '1px solid #f3f4f6' : undefined }}>
+              {filtered.map((inv, idx) => (
+                <tr key={inv.id} style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #f3f4f6' : undefined }}>
                   <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
                     <Link href={`/invoices/${inv.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{inv.internalNumber}</Link>
                   </td>
