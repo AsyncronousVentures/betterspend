@@ -58,11 +58,25 @@ export default function VendorDetailPage() {
   const inputStyle = { width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box' as const };
   const labelStyle = { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.25rem' };
 
+  const [punchoutSaving, setPunchoutSaving] = useState(false);
+
   const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
     active: { bg: '#dcfce7', text: '#15803d' },
     inactive: { bg: '#f3f4f6', text: '#6b7280' },
     blocked: { bg: '#fee2e2', text: '#dc2626' },
   };
+
+  async function togglePunchout() {
+    setPunchoutSaving(true);
+    try {
+      const updated = await api.vendors.update(id, { punchoutEnabled: !vendor.punchoutEnabled });
+      setVendor(updated);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setPunchoutSaving(false);
+    }
+  }
 
   if (loading) return <div style={{ padding: '2rem', color: '#6b7280' }}>Loading...</div>;
   if (error && !vendor) return <div style={{ padding: '2rem', color: '#dc2626' }}>{error}</div>;
@@ -108,6 +122,39 @@ export default function VendorDetailPage() {
             <Field label="Postal Code" value={vendor.address?.postalCode || '—'} />
             <Field label="Country" value={vendor.address?.country || '—'} />
           </Section>
+          {/* Punchout */}
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontWeight: 600, fontSize: '0.9rem', color: '#374151', margin: '0 0 0.25rem' }}>Punchout (cXML)</h2>
+                <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0 }}>
+                  Allow this vendor&apos;s catalog to be browsed via cXML PunchOut.{' '}
+                  {vendor.punchoutEnabled ? (
+                    <span style={{ color: '#059669', fontWeight: 600 }}>Enabled</span>
+                  ) : (
+                    <span style={{ color: '#9ca3af' }}>Disabled</span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={togglePunchout}
+                disabled={punchoutSaving}
+                style={{
+                  padding: '0.4rem 1rem', border: 'none', borderRadius: '6px', cursor: punchoutSaving ? 'not-allowed' : 'pointer',
+                  background: vendor.punchoutEnabled ? '#fee2e2' : '#d1fae5',
+                  color: vendor.punchoutEnabled ? '#dc2626' : '#059669',
+                  fontWeight: 500, fontSize: '0.875rem',
+                }}
+              >
+                {punchoutSaving ? '…' : vendor.punchoutEnabled ? 'Disable' : 'Enable'}
+              </button>
+            </div>
+            {vendor.punchoutEnabled && (
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#f0f9ff', borderRadius: '6px', fontSize: '0.8rem', color: '#0369a1' }}>
+                Setup endpoint: <code style={{ fontFamily: 'monospace' }}>POST /api/v1/punchout/vendors/{vendor.id}/setup</code>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSave}>
