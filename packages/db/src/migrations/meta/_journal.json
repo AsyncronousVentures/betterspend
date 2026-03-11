@@ -75,15 +75,15 @@
     {
       "idx": 10,
       "version": "7",
-      "when": 1773650000000,
-      "tag": "0010_vendor_diversity_esg",
+      "when": 1773700000000,
+      "tag": "0010_recurring_pos",
       "breakpoints": true
     },
     {
       "idx": 11,
       "version": "7",
-      "when": 1773700000000,
-      "tag": "0010_recurring_pos",
+      "when": 1773680000000,
+      "tag": "0011_vendor_diversity_esg",
       "breakpoints": true
     }
   ]
