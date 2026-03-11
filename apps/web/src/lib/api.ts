@@ -202,4 +202,7 @@ export const api = {
     invoiceAging: () => apiFetch<any[]>('/analytics/invoice-aging'),
     poCycleTime: () => apiFetch<any>('/analytics/po-cycle-time'),
   },
+  search: {
+    query: (q: string) => apiFetch<any>(`/search?q=${encodeURIComponent(q)}`),
+  },
 };
