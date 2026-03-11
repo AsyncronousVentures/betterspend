@@ -19,6 +19,7 @@ export default function WebhooksPage() {
   const [deliveries, setDeliveries] = useState<any[]>([]);
   const [form, setForm] = useState({ url: '', events: [] as string[], secret: '' });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => { load(); }, []);
 
@@ -27,8 +28,8 @@ export default function WebhooksPage() {
       setLoading(true);
       const data = await api.webhooks.list();
       setEndpoints(data);
-    } catch (e: any) {
-      alert(e.message);
+    } catch {
+      // silently fail
     } finally {
       setLoading(false);
     }
@@ -36,13 +37,14 @@ export default function WebhooksPage() {
 
   async function handleSave() {
     setSaving(true);
+    setError('');
     try {
       await api.webhooks.create({ url: form.url, events: form.events, secret: form.secret || undefined });
       setShowForm(false);
       setForm({ url: '', events: [], secret: '' });
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setSaving(false);
     }
@@ -53,7 +55,7 @@ export default function WebhooksPage() {
       await api.webhooks.update(ep.id, { isActive: !ep.isActive });
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -64,7 +66,7 @@ export default function WebhooksPage() {
       if (selectedEndpoint?.id === id) setSelectedEndpoint(null);
       await load();
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -74,7 +76,7 @@ export default function WebhooksPage() {
       const data = await api.webhooks.deliveries(ep.id);
       setDeliveries(data);
     } catch (e: any) {
-      alert(e.message);
+      setError(e.message);
     }
   }
 
@@ -91,6 +93,12 @@ export default function WebhooksPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
+      {error && (
+        <div style={{ marginBottom: '1rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.625rem 1rem', color: '#991b1b', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between' }}>
+          {error}
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991b1b', fontWeight: 700 }}>×</button>
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>Webhooks</h1>
         <button

@@ -8,6 +8,13 @@ function getCookie(name: string): string | undefined {
     ?.split('=')[1];
 }
 
+function clearAuthAndRedirect() {
+  if (typeof document !== 'undefined') {
+    document.cookie = 'bs_token=; Max-Age=0; path=/';
+    window.location.href = '/login';
+  }
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getCookie('bs_token');
   const res = await fetch(`${API_BASE}/api/v1${path}`, {
@@ -18,6 +25,11 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     },
     ...options,
   });
+
+  if (res.status === 401) {
+    clearAuthAndRedirect();
+    throw new Error('Session expired. Please log in again.');
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Request failed' }));
