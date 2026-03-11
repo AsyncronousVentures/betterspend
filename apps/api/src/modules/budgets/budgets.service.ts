@@ -132,6 +132,23 @@ export class BudgetsService {
     };
   }
 
+  async update(
+    id: string,
+    organizationId: string,
+    input: { name?: string; totalAmount?: number; currency?: string },
+  ) {
+    await this.findOne(id, organizationId);
+    await this.db.update(budgets)
+      .set({
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.totalAmount !== undefined ? { totalAmount: String(input.totalAmount) } : {}),
+        ...(input.currency !== undefined ? { currency: input.currency } : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(budgets.id, id), eq(budgets.organizationId, organizationId)));
+    return this.findOne(id, organizationId);
+  }
+
   async recordSpend(
     organizationId: string,
     departmentId: string,
