@@ -1,90 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../../lib/api';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.5rem 0.75rem',
-  border: '1px solid #d1d5db',
-  borderRadius: '6px',
-  fontSize: '0.875rem',
-  boxSizing: 'border-box',
-  outline: 'none',
-  background: '#fff',
-  color: '#111827',
+  width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #d1d5db',
+  borderRadius: '6px', fontSize: '0.875rem', boxSizing: 'border-box', background: '#fff', color: '#111827',
 };
 
 const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  color: '#374151',
-  marginBottom: '0.375rem',
+  display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.375rem',
 };
 
 export default function NewBudgetPage() {
   const router = useRouter();
-  const [name, setName] = useState('');
-  const [fiscalYear, setFiscalYear] = useState(String(CURRENT_YEAR));
-  const [totalAmount, setTotalAmount] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [budgetType, setBudgetType] = useState('department');
-  const [scopeId, setScopeId] = useState('');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    name: '', fiscalYear: String(CURRENT_YEAR), totalAmount: '', currency: 'USD',
+    budgetType: 'department', departmentId: '', projectId: '', glAccount: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    Promise.all([api.departments.list(), api.projects.list()])
+      .then(([d, p]) => { setDepartments(d); setProjects(p); })
+      .catch(() => {});
+  }, []);
+
+  function set(key: string, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-
-    if (!name.trim()) {
-      setError('Budget name is required.');
-      return;
-    }
-    const parsedYear = parseInt(fiscalYear, 10);
-    if (isNaN(parsedYear) || parsedYear < 2000 || parsedYear > 2100) {
-      setError('Please enter a valid fiscal year (e.g. 2025).');
-      return;
-    }
-    const parsedAmount = parseFloat(totalAmount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      setError('Please enter a valid total amount.');
-      return;
-    }
+    const parsedYear = parseInt(form.fiscalYear, 10);
+    const parsedAmount = parseFloat(form.totalAmount);
+    if (isNaN(parsedAmount) || parsedAmount < 0) { setError('Invalid amount'); return; }
 
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
-        name: name.trim(),
+        name: form.name.trim(),
         fiscalYear: parsedYear,
         totalAmount: parsedAmount,
-        currency: currency.trim().toUpperCase() || 'USD',
-        budgetType,
+        currency: form.currency.trim().toUpperCase() || 'USD',
       };
-      if (scopeId.trim()) {
-        payload.scopeId = scopeId.trim();
-      }
+      if (form.budgetType === 'department' && form.departmentId) payload.departmentId = form.departmentId;
+      else if (form.budgetType === 'project' && form.projectId) payload.projectId = form.projectId;
+      else if (form.budgetType === 'gl_account' && form.glAccount) payload.glAccount = form.glAccount;
 
-      const res = await fetch(`${API_URL}/budgets`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: 'Request failed' }));
-        throw new Error((err as { message?: string }).message || `HTTP ${res.status}`);
-      }
-
+      await api.budgets.create(payload);
       router.push('/budgets');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
     } finally {
       setSubmitting(false);
     }
@@ -92,105 +67,37 @@ export default function NewBudgetPage() {
 
   return (
     <div style={{ padding: '2rem', maxWidth: '640px' }}>
-      {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link
-          href="/budgets"
-          style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}
-        >
-          &larr; Back to Budgets
-        </Link>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: '#111827' }}>
-          New Budget
-        </h1>
+        <Link href="/budgets" style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}>← Back to Budgets</Link>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: '0.5rem 0 0', color: '#111827' }}>New Budget</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div
-          style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            padding: '1.5rem',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: '#111827' }}>
-            Budget Details
-          </h2>
-
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.5rem', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1.25rem', color: '#111827' }}>Budget Details</h2>
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {/* Name */}
             <div>
-              <label style={labelStyle}>
-                Name <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Engineering Q1 2025"
-                style={inputStyle}
-                required
-              />
+              <label style={labelStyle}>Name *</label>
+              <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Engineering FY2026" style={inputStyle} />
             </div>
-
-            {/* Fiscal Year + Total Amount */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
-                <label style={labelStyle}>
-                  Fiscal Year <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  value={fiscalYear}
-                  onChange={(e) => setFiscalYear(e.target.value)}
-                  min={2000}
-                  max={2100}
-                  step={1}
-                  style={inputStyle}
-                  required
-                />
+                <label style={labelStyle}>Fiscal Year *</label>
+                <input required type="number" value={form.fiscalYear} onChange={(e) => set('fiscalYear', e.target.value)} min={2000} max={2100} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>
-                  Total Amount <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  min={0}
-                  step="any"
-                  placeholder="0.00"
-                  style={inputStyle}
-                  required
-                />
+                <label style={labelStyle}>Total Amount *</label>
+                <input required type="number" value={form.totalAmount} onChange={(e) => set('totalAmount', e.target.value)} min={0} step="any" placeholder="0.00" style={inputStyle} />
               </div>
             </div>
-
-            {/* Currency + Budget Type */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={labelStyle}>Currency</label>
-                <input
-                  type="text"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                  maxLength={3}
-                  placeholder="USD"
-                  style={inputStyle}
-                />
+                <input value={form.currency} onChange={(e) => set('currency', e.target.value.toUpperCase())} maxLength={3} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>
-                  Budget Type <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <select
-                  value={budgetType}
-                  onChange={(e) => setBudgetType(e.target.value)}
-                  style={inputStyle}
-                >
+                <label style={labelStyle}>Budget Type *</label>
+                <select value={form.budgetType} onChange={(e) => set('budgetType', e.target.value)} style={inputStyle}>
                   <option value="department">Department</option>
                   <option value="project">Project</option>
                   <option value="gl_account">GL Account</option>
@@ -198,73 +105,44 @@ export default function NewBudgetPage() {
               </div>
             </div>
 
-            {/* Scope ID */}
-            <div>
-              <label style={labelStyle}>Scope ID</label>
-              <input
-                type="text"
-                value={scopeId}
-                onChange={(e) => setScopeId(e.target.value)}
-                placeholder="Optional — department, project, or GL account UUID"
-                style={inputStyle}
-              />
-              <p style={{ margin: '0.375rem 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
-                Link this budget to a specific department, project, or GL account by its UUID.
-              </p>
-            </div>
+            {form.budgetType === 'department' && (
+              <div>
+                <label style={labelStyle}>Department</label>
+                <select value={form.departmentId} onChange={(e) => set('departmentId', e.target.value)} style={inputStyle}>
+                  <option value="">Select department...</option>
+                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
+                </select>
+              </div>
+            )}
+            {form.budgetType === 'project' && (
+              <div>
+                <label style={labelStyle}>Project</label>
+                <select value={form.projectId} onChange={(e) => set('projectId', e.target.value)} style={inputStyle}>
+                  <option value="">Select project...</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
+                </select>
+              </div>
+            )}
+            {form.budgetType === 'gl_account' && (
+              <div>
+                <label style={labelStyle}>GL Account Code</label>
+                <input value={form.glAccount} onChange={(e) => set('glAccount', e.target.value)} placeholder="e.g. 6000" style={inputStyle} />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Error */}
         {error && (
-          <div
-            style={{
-              background: '#fee2e2',
-              border: '1px solid #fca5a5',
-              borderRadius: '6px',
-              padding: '0.75rem 1rem',
-              color: '#991b1b',
-              fontSize: '0.875rem',
-              marginBottom: '1rem',
-            }}
-          >
+          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '0.75rem 1rem', color: '#991b1b', fontSize: '0.875rem', marginBottom: '1rem' }}>
             {error}
           </div>
         )}
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              background: '#111827',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.625rem 1.5rem',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              cursor: submitting ? 'not-allowed' : 'pointer',
-              opacity: submitting ? 0.7 : 1,
-            }}
-          >
+          <button type="submit" disabled={submitting} style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.625rem 1.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}>
             {submitting ? 'Saving...' : 'Create Budget'}
           </button>
-          <Link
-            href="/budgets"
-            style={{
-              background: '#fff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              padding: '0.625rem 1.25rem',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              textDecoration: 'none',
-              display: 'inline-block',
-            }}
-          >
+          <Link href="/budgets" style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', padding: '0.625rem 1.25rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}>
             Cancel
           </Link>
         </div>

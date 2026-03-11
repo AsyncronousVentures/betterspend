@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001/api/v1';
+import { api } from '../../lib/api';
 
 function fmt(n: string | number | null | undefined) {
   if (n == null) return '—';
@@ -25,11 +24,6 @@ interface MonthRow    { month: string; total: string; invoiceCount: number }
 interface AgingRow    { bucket: string; count: number; total: string }
 interface CycleRow    { avgDays: string | null; minDays: string | null; maxDays: string | null; poCount: number }
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`);
-  if (!res.ok) throw new Error(`${path}: ${res.status}`);
-  return res.json() as Promise<T>;
-}
 
 const card: React.CSSProperties = {
   background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1.25rem',
@@ -49,12 +43,12 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     Promise.all([
-      fetchJson<KpiData>('/analytics/kpis'),
-      fetchJson<VendorRow[]>('/analytics/spend/by-vendor'),
-      fetchJson<DeptRow[]>('/analytics/spend/by-department'),
-      fetchJson<MonthRow[]>('/analytics/spend/monthly'),
-      fetchJson<AgingRow[]>('/analytics/invoice-aging'),
-      fetchJson<CycleRow>('/analytics/po-cycle-time'),
+      api.analytics.kpis() as Promise<KpiData>,
+      api.analytics.spendByVendor() as Promise<VendorRow[]>,
+      api.analytics.spendByDepartment() as Promise<DeptRow[]>,
+      api.analytics.monthlySpend() as Promise<MonthRow[]>,
+      api.analytics.invoiceAging() as Promise<AgingRow[]>,
+      api.analytics.poCycleTime() as Promise<CycleRow>,
     ])
       .then(([k, v, d, m, a, c]) => {
         setKpis(k); setVendors(v); setDepts(d); setMonthly(m); setAging(a); setCycle(c);
