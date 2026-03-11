@@ -14,6 +14,7 @@ interface PurchaseOrder {
   totalAmount: string | null;
   issuedAt: string | null;
   createdAt: string;
+  poType: string;
 }
 
 const STATUS_COLORS: Record<string, { background: string; color: string }> = {
@@ -90,6 +91,9 @@ export default function PurchaseOrdersPage() {
                 <tr key={po.id} style={{ borderBottom: idx < orders.length - 1 ? '1px solid #f3f4f6' : undefined }}>
                   <td style={{ padding: '0.875rem 1rem', fontWeight: 600 }}>
                     <Link href={`/purchase-orders/${po.id}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{po.number}</Link>
+                    {po.poType === 'blanket' && (
+                      <span style={{ marginLeft: '0.5rem', background: '#fef9c3', color: '#92400e', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>BLANKET</span>
+                    )}
                   </td>
                   <td style={{ padding: '0.875rem 1rem', color: '#374151' }}>{po.vendor?.name ?? '—'}</td>
                   <td style={{ padding: '0.875rem 1rem', color: '#6b7280' }}>V{po.version ?? 1}</td>

@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query, ParseUUIDPipe,
+  Controller, Get, Post, Patch, Delete, Param, Body, Query, ParseUUIDPipe,
   HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
@@ -78,5 +78,33 @@ export class PurchaseOrdersController {
   @ApiOperation({ summary: 'Cancel a PO' })
   cancel(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
     return this.purchaseOrdersService.cancel(id, orgId);
+  }
+
+  @Get(':id/releases')
+  @ApiOperation({ summary: 'List blanket PO releases' })
+  listReleases(@Param('id', ParseUUIDPipe) id: string, @CurrentOrgId() orgId: string) {
+    return this.purchaseOrdersService.listReleases(id, orgId);
+  }
+
+  @Post(':id/releases')
+  @ApiOperation({ summary: 'Create a blanket PO release' })
+  createRelease(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { amount: number; description?: string },
+    @CurrentOrgId() orgId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.purchaseOrdersService.createRelease(id, orgId, userId, body);
+  }
+
+  @Delete(':id/releases/:releaseId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel a blanket PO release' })
+  cancelRelease(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+    @CurrentOrgId() orgId: string,
+  ) {
+    return this.purchaseOrdersService.cancelRelease(id, releaseId, orgId);
   }
 }

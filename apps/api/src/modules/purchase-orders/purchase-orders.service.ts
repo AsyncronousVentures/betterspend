@@ -4,7 +4,7 @@ import { DB_TOKEN } from '../../database/database.module';
 import { SequenceService } from '../../common/services/sequence.service';
 import { WebhookEventService } from '../webhooks/webhook-event.service';
 import type { Db } from '@betterspend/db';
-import { purchaseOrders, poLines, poVersions, requisitions } from '@betterspend/db';
+import { purchaseOrders, poLines, poVersions, blanketReleases, requisitions } from '@betterspend/db';
 import { z } from 'zod';
 
 const createPoSchema = z.object({
@@ -231,5 +231,78 @@ export class PurchaseOrdersService {
       where: eq(poVersions.purchaseOrderId, id),
       orderBy: (v, { asc }) => asc(v.version),
     });
+  }
+
+  async listReleases(blanketPoId: string, organizationId: string) {
+    await this.findOne(blanketPoId, organizationId); // verify access
+    return this.db.query.blanketReleases.findMany({
+      where: eq(blanketReleases.blanketPoId, blanketPoId),
+      orderBy: (r, { asc }) => asc(r.releaseNumber),
+    });
+  }
+
+  async createRelease(blanketPoId: string, organizationId: string, releasedBy: string, input: { amount: number; description?: string }) {
+    const po = await this.findOne(blanketPoId, organizationId);
+    if (po.poType !== 'blanket') throw new BadRequestException('Releases can only be created against blanket POs');
+    if (!['issued', 'approved', 'partially_received'].includes(po.status)) {
+      throw new BadRequestException('Blanket PO must be issued or approved to create releases');
+    }
+
+    const limit = po.blanketTotalLimit ? parseFloat(po.blanketTotalLimit) : null;
+    const released = parseFloat(po.blanketReleasedAmount ?? '0');
+    if (limit !== null && released + input.amount > limit) {
+      throw new BadRequestException(`Release amount $${input.amount} would exceed blanket limit $${limit} (released so far: $${released})`);
+    }
+
+    // Get next release number
+    const existing = await this.db.query.blanketReleases.findMany({
+      where: eq(blanketReleases.blanketPoId, blanketPoId),
+    });
+    const releaseNumber = existing.length + 1;
+
+    const [release] = await this.db.insert(blanketReleases).values({
+      blanketPoId,
+      releaseNumber,
+      amount: String(input.amount),
+      description: input.description ?? null,
+      status: 'approved',
+      releasedBy,
+    }).returning();
+
+    // Update accumulated released amount
+    await this.db.update(purchaseOrders)
+      .set({
+        blanketReleasedAmount: String(released + input.amount),
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseOrders.id, blanketPoId));
+
+    return release;
+  }
+
+  async cancelRelease(blanketPoId: string, releaseId: string, organizationId: string) {
+    await this.findOne(blanketPoId, organizationId); // verify access
+    const release = await this.db.query.blanketReleases.findFirst({
+      where: (r, { and, eq }) => and(eq(r.id, releaseId), eq(r.blanketPoId, blanketPoId)),
+    });
+    if (!release) throw new NotFoundException(`Release ${releaseId} not found`);
+    if (release.status === 'cancelled') return release;
+
+    const [updated] = await this.db.update(blanketReleases)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(blanketReleases.id, releaseId))
+      .returning();
+
+    // Subtract from released amount
+    const po = await this.db.query.purchaseOrders.findFirst({ where: eq(purchaseOrders.id, blanketPoId) });
+    if (po) {
+      const released = parseFloat(po.blanketReleasedAmount ?? '0');
+      const amount = parseFloat(release.amount);
+      await this.db.update(purchaseOrders)
+        .set({ blanketReleasedAmount: String(Math.max(0, released - amount)), updatedAt: new Date() })
+        .where(eq(purchaseOrders.id, blanketPoId));
+    }
+
+    return updated;
   }
 }

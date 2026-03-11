@@ -114,6 +114,11 @@ export const api = {
     cancel: (id: string) => apiFetch<any>(`/purchase-orders/${id}/cancel`, { method: 'POST' }),
     changeOrder: (id: string, data: unknown) => apiFetch<any>(`/purchase-orders/${id}/change-order`, { method: 'POST', body: JSON.stringify(data) }),
     versions: (id: string) => apiFetch<any[]>(`/purchase-orders/${id}/versions`),
+    releases: (id: string) => apiFetch<any[]>(`/purchase-orders/${id}/releases`),
+    createRelease: (id: string, data: { amount: number; description?: string }) =>
+      apiFetch<any>(`/purchase-orders/${id}/releases`, { method: 'POST', body: JSON.stringify(data) }),
+    cancelRelease: (id: string, releaseId: string) =>
+      apiFetch<any>(`/purchase-orders/${id}/releases/${releaseId}`, { method: 'DELETE' }),
     pdf: (id: string) => {
       const token = getCookie('bs_token');
       return fetch(`${API_BASE}/api/v1/purchase-orders/${id}/pdf`, {
